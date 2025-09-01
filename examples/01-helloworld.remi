@@ -1,0 +1,6 @@
+invite sdm.say;
+
+spellcard main() i32 {
+    say("Hello from Remi Lang!\n");
+    offer 0;
+}

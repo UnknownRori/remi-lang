@@ -1,0 +1,9 @@
+invite sdm.say;
+
+invite printf;
+
+spellcard main() i32 {
+    printf("Hello, World!\n");
+
+    offer 0;
+}

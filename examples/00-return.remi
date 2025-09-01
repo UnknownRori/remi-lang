@@ -1,0 +1,3 @@
+spellcard main() i32 {
+    offer 0;
+}

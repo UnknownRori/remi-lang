@@ -1,0 +1,11 @@
+invite sdm.say;
+
+spellcard main() i32 {
+    eternal moon = "Remilia";
+    vow maid = "Sakuya";
+
+    say(moon);
+    say(maid);
+
+    offer 0;
+}

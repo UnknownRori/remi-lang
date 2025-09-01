@@ -1,0 +1,13 @@
+invite sdm.say;
+
+spellcard main() i32 {
+    eternal a = 69;
+
+    foreseen a > 50 {
+        say("Well that above 50\n");
+    } otherwise {
+        say("Well that below 50\n");
+    }
+
+    offer 0;
+}

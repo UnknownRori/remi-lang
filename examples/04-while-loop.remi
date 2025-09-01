@@ -1,0 +1,12 @@
+invite sdm.say;
+
+spellcard main() i32 {
+    eternal a = 0;
+
+    until a < 10  {
+        say("Hello!\n");
+        a = a + 1;
+    }
+
+    offer 0;
+}
