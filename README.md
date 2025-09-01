@@ -2,7 +2,10 @@
 
 
 <div align="center">
-  <img src="./docs/mascot.png" align="center" />
+  <img src="./docs/mascot.gif" align="center" />
+</div>
+<div align="center">
+  <span>Art drawn by UnknownRori</span>
 </div>
 
 > [!WARNING]
