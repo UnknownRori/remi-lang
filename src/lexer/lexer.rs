@@ -354,4 +354,21 @@ main
             assert_eq!(token.loc.row, loc.row);
         }
     }
+
+    #[test]
+    fn parse_int_literal() {
+        let body = "69";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = [(Loc::new(1, 1), TokenKind::IntLiteral(69))];
+
+        let mut lexer = Lexer::new(&chars);
+
+        for (loc, kind) in expected {
+            let token = lexer.next().expect("it should have token");
+            assert_eq!(token.kind, kind);
+            assert_eq!(token.loc.column, loc.column);
+            assert_eq!(token.loc.row, loc.row);
+        }
+    }
 }
