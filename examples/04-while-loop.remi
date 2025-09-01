@@ -1,7 +1,7 @@
 invite sdm.say;
 
 spellcard main() i32 {
-    eternal a = 0;
+    vow a = 0;
 
     until a < 10  {
         say("Hello!\n");
