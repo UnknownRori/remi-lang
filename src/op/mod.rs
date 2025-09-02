@@ -1,17 +1,5 @@
 use crate::value::Value;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum BinOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-
-    Equal,
-    Greater,
-    Less,
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Arg {
     Local(usize),

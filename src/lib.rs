@@ -1,9 +1,10 @@
+pub mod ast;
 pub mod cli;
 pub mod codegen;
 pub mod commons;
 pub mod lexer;
 pub mod op;
 pub mod parser;
+pub mod target;
 pub mod value;
 pub mod vm;
-pub mod target;
