@@ -1,5 +1,3 @@
-invite sdm.say;
-
 invite printf;
 
 spellcard main() i32 {

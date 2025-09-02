@@ -1,5 +1,3 @@
-invite sdm.say;
-
 spellcard main() i32 {
     vow a = 0;
 
