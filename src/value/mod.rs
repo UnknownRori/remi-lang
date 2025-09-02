@@ -3,8 +3,12 @@ pub enum Value {
     I32(i32),
 }
 
-pub enum DataType {
-    I32,
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::I32(int) => f.write_fmt(format_args!("INT {}", int)),
+        }
+    }
 }
 
 #[macro_export]

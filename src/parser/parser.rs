@@ -1,7 +1,7 @@
 use super::error::ParseError;
 
 use crate::{
-    ast::{BinOp, Expression, Statement},
+    ast::{Expression, Statement},
     commons::Loc,
     i32,
     lexer::{Lexer, Token, TokenKind},

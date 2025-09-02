@@ -1,0 +1,26 @@
+mod ir;
+
+use std::{error::Error, fmt::Write};
+
+pub use ir::*;
+
+use crate::op::Op;
+
+pub trait Codegen {
+    fn compile(&mut self, stmt: Vec<Op>) -> Result<String, CodegenError>;
+}
+
+#[derive(Debug)]
+pub enum CodegenError {
+    Unsupported { op: Op },
+}
+
+impl Error for CodegenError {}
+
+impl std::fmt::Display for CodegenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CodegenError::Unsupported { op } => f.write_fmt(format_args!("{}", op)),
+        }
+    }
+}

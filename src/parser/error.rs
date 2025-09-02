@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::{commons::Loc, lexer::TokenKind};
 
 pub enum ParseError {
@@ -7,6 +9,8 @@ pub enum ParseError {
         loc: Loc,
     },
 }
+
+impl Error for ParseError {}
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

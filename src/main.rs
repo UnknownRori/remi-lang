@@ -1,3 +1,6 @@
+use remi_lang::cli;
+
 fn main() {
-    println!("Hello, world!");
+    let mut frontend = cli::CLI::new();
+    frontend.run();
 }
