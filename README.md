@@ -25,6 +25,23 @@ It is produced by and large by a single artist known as ZUN, and has a
 For more information on dōjin culture,
 [click here](https://en.wikipedia.org/wiki/D%C5%8Djin).
 
+### Support
+
+|Name            | Core | FFI |
+|----------------|------|-----|
+|Windows x86_64  |  🔧  |  ✖️  |
+|Linux x86_64    |  🔧  |  ✖️  |
+|JavaScript      |  ✖️   |  ✖️  |
+|Byte Code       |  ✖️   |  ✖️  |
+
+- ✅ Well Supported
+- 🔧 Under construction
+- ⚠️  Major Bug/Issue
+- ✖️  Not supported yet
+
+- Core: Core feature of the language
+- FFI: Allow you to import external shared library
+
 ## Quickstart
 
 -
