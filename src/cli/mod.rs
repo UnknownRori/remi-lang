@@ -43,11 +43,12 @@ impl CLI {
                     let ast = parser.parse()?;
                     let mut compiler = Compiler::new();
                     let stmt = compiler.compile(ast)?;
-
                     let mut codegen = IRCodegen;
-                    let op = codegen.compile(stmt).map_err(|err| Box::new(err))?;
-                    let mut fd_out = File::create_new(out)?;
-                    fd_out.write(op.as_bytes());
+                    let op = codegen
+                        .compile(compiler, stmt)
+                        .map_err(|err| Box::new(err))?;
+                    let mut fd_out = File::create(out)?;
+                    fd_out.write(op.as_bytes())?;
                     Ok(())
                 }
             },

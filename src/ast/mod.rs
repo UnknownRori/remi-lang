@@ -53,6 +53,9 @@ pub struct FunctionArgs {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Statement {
     Expression(Expression),
+    Invite {
+        name: String,
+    },
     Eternal {
         name: String,
         annotation: Option<String>,

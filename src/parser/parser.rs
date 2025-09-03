@@ -1,10 +1,11 @@
 use super::error::ParseError;
 
 use crate::{
-    ast::{Expression, Statement},
+    ast::{Expression, FunctionArgs, Statement},
     commons::Loc,
     i32,
     lexer::{Lexer, Token, TokenKind},
+    string,
 };
 
 fn get_precedence(token: &TokenKind) -> Option<u8> {
@@ -46,6 +47,28 @@ impl<'a> Parser<'a> {
             expected: vec![],
             loc,
         })
+    }
+
+    fn expect_many_kind_but_no_consume(
+        &mut self,
+        loc: Loc,
+        expected: Vec<TokenKind>,
+    ) -> Result<bool, ParseError> {
+        let token = self.peek_token();
+        for i in expected {
+            if token.is_none() {
+                return Err(ParseError::UnexpectedToken {
+                    found: TokenKind::EOF,
+                    expected: vec![TokenKind::Ident("".to_string()), TokenKind::CParen],
+                    loc,
+                });
+            }
+
+            if token.unwrap().kind == i {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     fn expect_kind(&mut self, loc: Loc, expected: TokenKind) -> Result<Token, ParseError> {
@@ -96,6 +119,7 @@ impl<'a> Parser<'a> {
             TokenKind::SpellCard => self.parse_spellcard(token.loc).map(Some),
             TokenKind::Offer => self.parse_offer(token.loc).map(Some),
             TokenKind::Eternal => self.parse_eternal(token.loc).map(Some),
+            TokenKind::Invite => self.parse_invite(token.loc).map(Some),
             TokenKind::Vow => todo!("Type alias"),
             TokenKind::EOF => Ok(None),
             _ => Err(ParseError::UnexpectedToken {
@@ -106,11 +130,22 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_ident(&mut self, loc: Loc, _name: String) -> Result<Vec<Statement>, ParseError> {
+    fn parse_ident(&mut self, loc: Loc, name: String) -> Result<Vec<Statement>, ParseError> {
         let token = self.next_token(loc)?;
         match token.kind {
-            TokenKind::OParen => todo!("function call"),
-            TokenKind::Equal => todo!("assignment"),
+            TokenKind::OParen => {
+                let args = self.parse_call(token.loc)?;
+                self.expect_kind(token.loc, TokenKind::CParen)?;
+                self.expect_kind(token.loc, TokenKind::SemiColon)?;
+                Ok(vec![Statement::Expression(Expression::Call {
+                    function: name,
+                    args,
+                })])
+            }
+            TokenKind::Equal => {
+                let value = self.expression(loc)?;
+                Ok(vec![Statement::Assignment { name, value }])
+            }
             _ => Err(ParseError::UnexpectedToken {
                 found: token.kind,
                 expected: vec![TokenKind::OParen, TokenKind::Equal],
@@ -122,6 +157,39 @@ impl<'a> Parser<'a> {
         let (name, _) = self.get_indent(loc)?;
 
         self.expect_kind(loc, TokenKind::OParen)?;
+        let mut args = vec![];
+        loop {
+            let (name_param, loc) = match self.peek_token() {
+                Some(token) => match token.kind.clone() {
+                    TokenKind::Ident(name) => (name, token.loc.clone()),
+                    TokenKind::CParen => break,
+                    _ => {
+                        return Err(ParseError::UnexpectedToken {
+                            found: token.kind.clone(),
+                            expected: vec![TokenKind::Ident("".to_string()), TokenKind::CParen],
+                            loc: token.loc,
+                        });
+                    }
+                },
+                None => {
+                    return Err(ParseError::UnexpectedToken {
+                        found: TokenKind::EOF,
+                        expected: vec![TokenKind::Ident("".to_string()), TokenKind::CParen],
+                        loc,
+                    });
+                }
+            };
+            self.expect_kind(loc, TokenKind::Colon)?;
+            let (annotation, _) = self.get_indent(loc)?;
+            args.push(FunctionArgs {
+                name: name_param,
+                annotation,
+            });
+
+            if self.expect_many_kind_but_no_consume(loc, vec![TokenKind::Comma])? {
+                self.expect_kind(loc, TokenKind::Comma)?;
+            }
+        }
         self.expect_kind(loc, TokenKind::CParen)?;
         let (type_annotation, _) = self.get_indent(loc)?;
         self.expect_kind(loc, TokenKind::OCurly)?;
@@ -130,7 +198,7 @@ impl<'a> Parser<'a> {
         // TODO : Parse args
         Ok(vec![Statement::SpellCard {
             name,
-            args: vec![],
+            args,
             return_type: Some(type_annotation),
             body,
         }])
@@ -183,6 +251,12 @@ impl<'a> Parser<'a> {
         Ok(vec![Statement::Offer(primary)])
     }
 
+    fn parse_invite(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
+        let (name, new_loc) = self.get_indent(loc)?;
+        self.expect_kind(new_loc, TokenKind::SemiColon)?;
+        Ok(vec![Statement::Invite { name }])
+    }
+
     fn expression(&mut self, loc: Loc) -> Result<Expression, ParseError> {
         self.bin_expression(0, loc)
     }
@@ -216,7 +290,22 @@ impl<'a> Parser<'a> {
         let token = self.next_token(loc)?;
         match token.kind {
             TokenKind::IntLiteral(int) => Ok(Expression::Literal(i32!(int as i32))),
-            TokenKind::Ident(name) => Ok(Expression::Variable(name)), // TODO : Parse func call
+            TokenKind::StringLiteral(str) => Ok(Expression::Literal(string!(str))),
+            TokenKind::Ident(name) => {
+                let args = match self.peek_token() {
+                    Some(tok) if tok.kind == TokenKind::OParen => {
+                        self.expect_kind(loc, TokenKind::OParen)?;
+                        let call = self.parse_call(loc)?;
+                        self.expect_kind(loc, TokenKind::CParen)?;
+                        call
+                    }
+                    _ => return Ok(Expression::Variable(name)),
+                };
+                Ok(Expression::Call {
+                    function: name,
+                    args,
+                })
+            }
             TokenKind::OParen => {
                 let expr = self.expression(token.loc)?;
                 self.expect_kind(token.loc, TokenKind::CParen)?;
@@ -232,6 +321,31 @@ impl<'a> Parser<'a> {
                 loc,
             }),
         }
+    }
+
+    fn parse_call(&mut self, loc: Loc) -> Result<Vec<Expression>, ParseError> {
+        let mut stmt = vec![];
+        loop {
+            let loc = match self.peek_token() {
+                Some(token) => match token.kind.clone() {
+                    TokenKind::CParen => break,
+                    _ => token.loc.clone(),
+                },
+                None => {
+                    return Err(ParseError::UnexpectedToken {
+                        found: TokenKind::EOF,
+                        expected: vec![TokenKind::CParen],
+                        loc,
+                    });
+                }
+            };
+            let expr = self.expression(loc)?;
+            stmt.push(expr);
+            if self.expect_many_kind_but_no_consume(loc, vec![TokenKind::Comma])? {
+                self.expect_kind(loc, TokenKind::Comma)?;
+            }
+        }
+        Ok(stmt)
     }
 
     fn parse_body(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
@@ -386,6 +500,89 @@ spellcard main() i32 {
                 },
                 Statement::Offer(Expression::Variable("foo".to_owned())),
             ],
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_call_function_without_param() {
+        let body = "
+foo();
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Expression(Expression::Call {
+            function: "foo".to_owned(),
+            args: vec![],
+        })];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_call_function_with_1_param() {
+        let body = "
+foo(1);
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Expression(Expression::Call {
+            function: "foo".to_owned(),
+            args: vec![Expression::Literal(i32!(1))],
+        })];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_call_function_with_2_param() {
+        let body = "
+foo(1, 2);
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Expression(Expression::Call {
+            function: "foo".to_owned(),
+            args: vec![Expression::Literal(i32!(1)), Expression::Literal(i32!(2))],
+        })];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_call_function_in_expression() {
+        let body = "
+foo = foo(1, 2);
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Assignment {
+            name: "foo".to_string(),
+            value: Expression::Call {
+                function: "foo".to_owned(),
+                args: vec![Expression::Literal(i32!(1)), Expression::Literal(i32!(2))],
+            },
         }];
 
         let lexer = Lexer::new(&chars);

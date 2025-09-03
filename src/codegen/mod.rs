@@ -4,10 +4,10 @@ use std::{error::Error, fmt::Write};
 
 pub use ir::*;
 
-use crate::op::Op;
+use crate::{compiler::Compiler, op::Op};
 
 pub trait Codegen {
-    fn compile(&mut self, stmt: Vec<Op>) -> Result<String, CodegenError>;
+    fn compile(&mut self, compiler: Compiler, stmt: Vec<Op>) -> Result<String, CodegenError>;
 }
 
 #[derive(Debug)]

@@ -1,5 +1,5 @@
 use crate::commons::Loc;
-use std::{error::Error, fmt::Write};
+use std::error::Error;
 
 #[derive(Debug)]
 pub enum CompilerError {

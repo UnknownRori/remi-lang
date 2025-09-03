@@ -7,13 +7,14 @@ pub struct Lexer<'a> {
     loc: Loc,
 }
 
-const KEYWORDS: [(&str, TokenKind); 6] = [
+const KEYWORDS: [(&str, TokenKind); 7] = [
     ("spellcard", TokenKind::SpellCard),
     ("offer", TokenKind::Offer),
     ("eternal", TokenKind::Eternal),
     ("vow", TokenKind::Vow),
     ("and", TokenKind::Eternal),
     ("or", TokenKind::Vow),
+    ("invite", TokenKind::Invite),
 ];
 
 impl<'a> Lexer<'a> {
@@ -236,7 +237,7 @@ mod test {
 
     #[test]
     fn parse_keyword() {
-        let body = "spellcard offer eternal vow and or";
+        let body = "spellcard offer eternal vow and or invite";
         let chars = body.chars().collect::<Vec<_>>();
         let mut lexer = Lexer::new(&chars);
 

@@ -49,7 +49,7 @@ impl std::fmt::Debug for ParseError {
                     }
                     f.write_fmt(format_args!("{}", kind))?;
                 }
-                f.write_fmt(format_args!("at {}", loc))?;
+                f.write_fmt(format_args!(" at {}", loc))?;
                 Ok(())
             }
         }

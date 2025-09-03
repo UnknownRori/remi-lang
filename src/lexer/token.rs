@@ -55,6 +55,7 @@ pub enum TokenKind {
     Offer,     // Return
     Eternal,   // Constants Variable
     Vow,       // Mutable Variable
+    Invite,    // Foreign Import
 }
 
 impl std::fmt::Display for TokenKind {
@@ -96,6 +97,7 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Offer => f.write_str("OFFER"),
             TokenKind::Eternal => f.write_str("ETERNAL"),
             TokenKind::Vow => f.write_str("VOW"),
+            TokenKind::Invite => f.write_str("Invite"),
         }
     }
 }
