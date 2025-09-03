@@ -56,6 +56,9 @@ pub enum TokenKind {
     Eternal,   // Constants Variable
     Vow,       // Mutable Variable
     Invite,    // Foreign Import
+    Foreseen,  // If statement
+    Otherwise, // else statement
+    Until,     // while statement
 }
 
 impl std::fmt::Display for TokenKind {
@@ -97,7 +100,10 @@ impl std::fmt::Display for TokenKind {
             TokenKind::Offer => f.write_str("OFFER"),
             TokenKind::Eternal => f.write_str("ETERNAL"),
             TokenKind::Vow => f.write_str("VOW"),
-            TokenKind::Invite => f.write_str("Invite"),
+            TokenKind::Invite => f.write_str("INVITE"),
+            TokenKind::Foreseen => f.write_str("FORESEEN"),
+            TokenKind::Otherwise => f.write_str("OTHERWISE"),
+            TokenKind::Until => f.write_str("UNTIL"),
         }
     }
 }

@@ -120,6 +120,8 @@ impl<'a> Parser<'a> {
             TokenKind::Offer => self.parse_offer(token.loc).map(Some),
             TokenKind::Eternal => self.parse_eternal(token.loc).map(Some),
             TokenKind::Invite => self.parse_invite(token.loc).map(Some),
+            TokenKind::Foreseen => self.parse_foreseen(token.loc).map(Some),
+            TokenKind::Until => self.parse_until(token.loc).map(Some),
             TokenKind::Vow => todo!("Type alias"),
             TokenKind::EOF => Ok(None),
             _ => Err(ParseError::UnexpectedToken {
@@ -255,6 +257,41 @@ impl<'a> Parser<'a> {
         let (name, new_loc) = self.get_indent(loc)?;
         self.expect_kind(new_loc, TokenKind::SemiColon)?;
         Ok(vec![Statement::Invite { name }])
+    }
+
+    fn parse_foreseen(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
+        let condition = self.expression(loc)?;
+        self.expect_kind(loc, TokenKind::OCurly)?;
+        let then_branch = self.parse_body(loc)?;
+        let mut else_branch = None;
+        match self.peek_token() {
+            Some(token) => match token.kind {
+                TokenKind::Otherwise => {
+                    let token = self.next_token(loc)?;
+                    self.expect_kind(token.loc, TokenKind::OCurly)?;
+                    else_branch = Some(self.parse_body(token.loc)?);
+                }
+                _ => {}
+            },
+            None => {}
+        }
+
+        Ok(vec![Statement::Foreseen {
+            condition,
+            then_branch,
+            else_branch,
+        }])
+    }
+
+    fn parse_until(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
+        let condition = self.expression(loc)?;
+        self.expect_kind(loc, TokenKind::OCurly)?;
+        let then_branch = self.parse_body(loc)?;
+
+        Ok(vec![Statement::Until {
+            condition,
+            body: then_branch,
+        }])
     }
 
     fn expression(&mut self, loc: Loc) -> Result<Expression, ParseError> {
@@ -583,6 +620,191 @@ foo = foo(1, 2);
                 function: "foo".to_owned(),
                 args: vec![Expression::Literal(i32!(1)), Expression::Literal(i32!(2))],
             },
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_foreseen() {
+        let body = "
+foreseen foo {
+    say(1);
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Foreseen {
+            condition: Expression::Variable("foo".to_string()),
+            then_branch: vec![Statement::Expression(Expression::Call {
+                function: "say".to_string(),
+                args: vec![Expression::Literal(i32!(1))],
+            })],
+            else_branch: None,
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_foreseen_in_spellcard() {
+        let body = "
+spellcard main() i32 {
+    foreseen foo {
+        say(1);
+    }
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::SpellCard {
+            name: "main".to_owned(),
+            args: vec![],
+            return_type: Some("i32".to_string()),
+            body: vec![Statement::Foreseen {
+                condition: Expression::Variable("foo".to_string()),
+                then_branch: vec![Statement::Expression(Expression::Call {
+                    function: "say".to_string(),
+                    args: vec![Expression::Literal(i32!(1))],
+                })],
+                else_branch: None,
+            }],
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_foreseen_with_otherwise() {
+        let body = "
+foreseen foo {
+    say(1);
+} otherwise {
+    say(2);
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Foreseen {
+            condition: Expression::Variable("foo".to_string()),
+            then_branch: vec![Statement::Expression(Expression::Call {
+                function: "say".to_string(),
+                args: vec![Expression::Literal(i32!(1))],
+            })],
+            else_branch: Some(vec![Statement::Expression(Expression::Call {
+                function: "say".to_string(),
+                args: vec![Expression::Literal(i32!(2))],
+            })]),
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_foreseen_with_otherwise_in_spellcard() {
+        let body = "
+spellcard main() i32 {
+    foreseen foo {
+        say(1);
+    } otherwise {
+        say(2);
+    }
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::SpellCard {
+            name: "main".to_owned(),
+            args: vec![],
+            return_type: Some("i32".to_string()),
+            body: vec![Statement::Foreseen {
+                condition: Expression::Variable("foo".to_string()),
+                then_branch: vec![Statement::Expression(Expression::Call {
+                    function: "say".to_string(),
+                    args: vec![Expression::Literal(i32!(1))],
+                })],
+                else_branch: Some(vec![Statement::Expression(Expression::Call {
+                    function: "say".to_string(),
+                    args: vec![Expression::Literal(i32!(2))],
+                })]),
+            }],
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_until() {
+        let body = "
+until foo {
+    say(1);
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::Until {
+            condition: Expression::Variable("foo".to_string()),
+            body: vec![Statement::Expression(Expression::Call {
+                function: "say".to_string(),
+                args: vec![Expression::Literal(i32!(1))],
+            })],
+        }];
+
+        let lexer = Lexer::new(&chars);
+        let mut parser = Parser::new(lexer);
+        let ops = parser.parse().expect("Should parse correctly");
+        for (i, expect) in expected.iter().enumerate() {
+            assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+        }
+    }
+
+    #[test]
+    fn parse_until_in_spellcard() {
+        let body = "
+spellcard main() i32 {
+    until foo {
+        say(1);
+    }
+}
+        ";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = vec![Statement::SpellCard {
+            name: "main".to_owned(),
+            args: vec![],
+            return_type: Some("i32".to_string()),
+            body: vec![Statement::Until {
+                condition: Expression::Variable("foo".to_string()),
+                body: vec![Statement::Expression(Expression::Call {
+                    function: "say".to_string(),
+                    args: vec![Expression::Literal(i32!(1))],
+                })],
+            }],
         }];
 
         let lexer = Lexer::new(&chars);
