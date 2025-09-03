@@ -28,6 +28,7 @@ pub enum Command {
     },
 
     #[command(
+        name = "cc",
         about = "Compile file in specified architecture",
         long_about = "Compile specified file using fasm backend for executable or compile into byte code"
     )]
@@ -42,7 +43,7 @@ pub enum Command {
         linker_flag: Option<String>,
 
         #[arg(short, long)]
-        arch: Option<Target>,
+        target: Option<Target>,
 
         #[arg(short, long, help = "increase verbosity of output")]
         verbose: bool,

@@ -48,7 +48,7 @@ impl CLI {
             args::Command::Compile {
                 src,
                 out,
-                arch,
+                target,
                 linker_flag,
                 ..
             } => {
@@ -60,14 +60,20 @@ impl CLI {
                 let obj_file_name = format!("{}.o", out);
 
                 {
-                    match arch {
-                        Some(arch) => match arch {
+                    match target {
+                        Some(target) => match target {
                             Target::LinuxX86_64 | Target::WindowsX86_64 => {
+                                {
+                                    let mut fd_out = File::create(&asm_file_name)?;
+                                    let op = self.compile(target, body)?;
+                                    fd_out.write_all(op.as_bytes())?;
+                                    fd_out.flush()?;
+                                }
                                 self.build(asm_file_name, obj_file_name, out, linker_flag)?;
                             }
                             Target::IR => {
                                 let mut fd_out = File::create(out)?;
-                                let op = self.compile(arch, body)?;
+                                let op = self.compile(target, body)?;
                                 fd_out.write_all(op.as_bytes())?;
                                 fd_out.flush()?;
                             }
@@ -75,7 +81,7 @@ impl CLI {
                         },
                         None => {
                             #[cfg(target_os = "windows")]
-                            let arch = arch.unwrap_or(crate::target::Target::WindowsX86_64);
+                            let arch = target.unwrap_or(crate::target::Target::WindowsX86_64);
 
                             #[cfg(target_os = "linux")]
                             let arch = arch.unwrap_or(crate::target::Target::LinuxX86_64);
