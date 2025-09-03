@@ -1,4 +1,4 @@
-use remi_lang::cli;
+use remi::cli;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut frontend = cli::CLI::new();
