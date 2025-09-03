@@ -71,13 +71,13 @@ impl CLI {
                                 }
                                 self.build(asm_file_name, obj_file_name, out, linker_flag)?;
                             }
-                            Target::IR => {
+                            Target::IR | Target::Javascript => {
                                 let mut fd_out = File::create(out)?;
                                 let op = self.compile(target, body)?;
                                 fd_out.write_all(op.as_bytes())?;
                                 fd_out.flush()?;
                             }
-                            _ => {}
+                            _ => panic!("target is not implemented"),
                         },
                         None => {
                             #[cfg(target_os = "windows")]

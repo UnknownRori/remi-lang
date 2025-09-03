@@ -1,6 +1,11 @@
 use crate::{lexer::TokenKind, value::Value};
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum UnaryOp {
+    Not,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum BinOp {
     Add,
     Sub,
@@ -47,6 +52,10 @@ impl TryFrom<TokenKind> for BinOp {
 pub enum Expression {
     Literal(Value),
     Variable(String),
+    Unary {
+        op: UnaryOp,
+        arg: Box<Expression>,
+    },
     Binary {
         op: BinOp,
         left: Box<Expression>,
@@ -76,7 +85,6 @@ pub enum Statement {
     },
     Vow {
         name: String,
-        value: Expression,
         annotation: Option<String>,
     },
     Assignment {

@@ -116,6 +116,19 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    ret"));
                     offset = 0;
                 }
+                op::Op::UnaryNot { offset, arg } => {
+                    code.push("    xor rbx, rbx".to_owned());
+                    match arg {
+                        Arg::Local(offset) => {
+                            code.push(format!("    cmp rax, [rbp-{}]", (offset + 1) * 8))
+                        }
+                        Arg::Literal(value) => code.push(format!("    cmp rax, {}", value.str())),
+                        Arg::DataOffset(offset) => code.push(format!("    cmp rax, [{}]", offset)),
+                    }
+                    code.push("    test al, al".to_owned());
+                    code.push("    setz bl".to_owned());
+                    code.push(format!("    mov [rbp-{}], rbx", (offset + 1) * 8));
+                }
                 op::Op::BinOp {
                     binop,
                     offset,
@@ -133,7 +146,20 @@ impl Codegen for WindowsX86_64 {
                         }
                     }
                     match binop {
-                        crate::ast::BinOp::Add => todo!(),
+                        crate::ast::BinOp::Add => {
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    add rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    add rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    add rax, [{}]", offset))
+                                }
+                            }
+                            code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
+                        }
                         crate::ast::BinOp::Sub => todo!(),
                         crate::ast::BinOp::Mul => todo!(),
                         crate::ast::BinOp::Div => todo!(),
@@ -154,7 +180,22 @@ impl Codegen for WindowsX86_64 {
                             code.push("    setg bl".to_owned());
                             code.push(format!("    mov [rbp-{}], rbx", (offset + 1) * 8));
                         }
-                        crate::ast::BinOp::Less => todo!(),
+                        crate::ast::BinOp::Less => {
+                            code.push("    xor rbx, rbx".to_owned());
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    cmp rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    cmp rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    cmp rax, [{}]", offset))
+                                }
+                            }
+                            code.push("    setl bl".to_owned());
+                            code.push(format!("    mov [rbp-{}], rbx", (offset + 1) * 8));
+                        }
                     }
 
                     code.push(format!(""));

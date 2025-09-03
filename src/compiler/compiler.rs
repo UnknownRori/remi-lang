@@ -83,7 +83,8 @@ impl Compiler {
         for i in ast {
             match i {
                 Statement::Expression(expr) => {
-                    _ = self.parse_expression(scope, &mut ops, expr)?;
+                    let (_, mut op) = self.parse_expression(scope, expr)?;
+                    ops.append(&mut op);
                 }
                 Statement::Invite { name } => {
                     self.spellcard.insert(
@@ -110,8 +111,9 @@ impl Compiler {
                             loc: Loc::default(),
                         })?
                         .clone();
-                    let arg = self.parse_expression(scope, &mut ops, value)?;
+                    let (arg, mut op) = self.parse_expression(scope, value)?;
 
+                    ops.append(&mut op);
                     ops.push(Op::EternalAssign { offset, arg });
                 }
                 Statement::Foreseen {
@@ -125,7 +127,9 @@ impl Compiler {
                     let id = scope.alloc_label();
                     let end = format!(".L{}", id);
 
-                    let arg = self.parse_expression(scope, &mut ops, condition)?;
+                    let (arg, mut op_condition) = self.parse_expression(scope, condition)?;
+                    ops.append(&mut op_condition);
+
                     let mut then_body = self.compile_statement(scope, then_branch)?;
                     match else_branch {
                         Some(body) => {
@@ -152,7 +156,26 @@ impl Compiler {
                     }
                     ops.push(Op::Label(end));
                 }
-                Statement::Until { .. } => todo!(),
+                Statement::Until { condition, body } => {
+                    let id = scope.alloc_label();
+                    let start = format!(".L{}", id);
+
+                    let id = scope.alloc_label();
+                    let end = format!(".L{}", id);
+
+                    let (arg, mut op) = self.parse_expression(scope, condition)?;
+                    let mut body = self.compile_statement(scope, body)?;
+
+                    ops.push(Op::Label(start.clone()));
+                    ops.append(&mut op);
+                    ops.push(Op::JmpIfNot {
+                        name: end.clone(),
+                        arg,
+                    });
+                    ops.append(&mut body);
+                    ops.push(Op::Jmp { name: start });
+                    ops.push(Op::Label(end));
+                }
                 Statement::SpellCard { name, body, .. } => {
                     let mut scope = Scope::new();
                     let mut body = self.compile_statement(&mut scope, body)?;
@@ -169,7 +192,8 @@ impl Compiler {
                     ops.append(&mut body);
                 }
                 Statement::Offer(expression) => {
-                    let arg = self.parse_expression(scope, &mut ops, expression)?;
+                    let (arg, mut op) = self.parse_expression(scope, expression)?;
+                    ops.append(&mut op);
                     ops.push(Op::Ret(arg));
                 }
             }
@@ -180,19 +204,18 @@ impl Compiler {
     fn parse_expression(
         &mut self,
         scope: &mut Scope,
-        ops: &mut Vec<Op>,
         expr: Expression,
-    ) -> Result<Arg, CompilerError> {
+    ) -> Result<(Arg, Vec<Op>), CompilerError> {
         match expr {
             Expression::Literal(value) => match value {
-                Value::I32(val) => Ok(Arg::Literal(i32!(val))),
+                Value::I32(val) => Ok((Arg::Literal(i32!(val)), vec![])),
                 Value::String(val) => {
                     let mut bytes = val.clone().into_bytes();
                     let offset = self.eternal_value.len();
                     self.eternal_value.append(&mut bytes);
                     self.eternal_value.push(0);
                     self.eternal.insert(val, offset);
-                    Ok(Arg::DataOffset(offset))
+                    Ok((Arg::DataOffset(offset), vec![]))
                 }
             },
             Expression::Variable(offset) => {
@@ -202,21 +225,36 @@ impl Compiler {
                         found: offset,
                         loc: Loc::default(),
                     })?;
-                Ok(Arg::Local(offset))
+                Ok((Arg::Local(offset), vec![]))
+            }
+            Expression::Unary { op, arg } => {
+                let mut opsbin = vec![];
+                let (lhs, mut opl) = self.parse_expression(scope, *arg)?;
+                let offset = scope.alloc_local("__temp");
+                opsbin.append(&mut opl);
+                match op {
+                    crate::ast::UnaryOp::Not => {
+                        opsbin.push(Op::UnaryNot { offset, arg: lhs });
+                    }
+                }
+                Ok((Arg::Local(offset), opsbin))
             }
             Expression::Binary { op, left, right } => {
-                let lhs = self.parse_expression(scope, ops, *left)?;
-                let rhs = self.parse_expression(scope, ops, *right)?;
+                let mut opsbin = vec![];
+                let (lhs, mut opl) = self.parse_expression(scope, *left)?;
+                let (rhs, mut opr) = self.parse_expression(scope, *right)?;
                 let offset = scope.alloc_local("__temp");
 
-                ops.push(Op::BinOp {
+                opsbin.append(&mut opl);
+                opsbin.append(&mut opr);
+                opsbin.push(Op::BinOp {
                     binop: op,
                     offset,
                     lhs,
                     rhs,
                 });
 
-                Ok(Arg::Local(offset))
+                Ok((Arg::Local(offset), opsbin))
             }
             Expression::Call { function, args } => {
                 let _spellcard =
@@ -227,9 +265,11 @@ impl Compiler {
                             loc: Loc::default(),
                         })?;
 
+                let mut ops = vec![];
                 let mut args_expr = vec![];
                 for expr in args {
-                    let arg = self.parse_expression(scope, ops, expr)?;
+                    let (arg, mut op) = self.parse_expression(scope, expr)?;
+                    ops.append(&mut op);
                     args_expr.push(arg);
                 }
 
@@ -239,7 +279,7 @@ impl Compiler {
                 });
 
                 let offset = scope.alloc_local("__temp");
-                Ok(Arg::Local(offset))
+                Ok((Arg::Local(offset), ops))
             }
         }
     }

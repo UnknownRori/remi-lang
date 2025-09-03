@@ -1,4 +1,4 @@
-// ./target/debug/remi.exe compile -s ./examples/06-raylib.remi -o ./raylib-example -a windows-x86-64 -l="-L./raylib/ -lmsvcrt -luser32 -lkernel32 -lraylib -lopengl32 -lgdi32 -lwinmm" 
+// cargo run -- cc -s ./examples/06-raylib.remi -o ./raylib-example -l="-L./raylib/ -lmsvcrt -luser32 -lkernel32 -lraylib -lopengl32 -lgdi32 -lwinmm" 
 invite printf;
 
 invite InitWindow;
@@ -19,7 +19,7 @@ spellcard main() i32 {
 
     until !WindowShouldClose()  {
         BeginDrawing();
-        ClearBackground(0xFF0000FF);
+        ClearBackground(4278190335);
         EndDrawing();
     }
 

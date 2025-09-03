@@ -28,8 +28,6 @@ function readString(offset) {
     }
     return chars.join('');
 }
-
-function printf(str) {console.log(str);}
 "
             .to_owned(),
         );
@@ -56,7 +54,9 @@ impl Codegen for JavascriptCodegen {
                 crate::op::Op::StackAlloc(offset) => {
                     code.push(format!("    let _{};", offset));
                 }
-                crate::op::Op::Invite { .. } => {}
+                crate::op::Op::Invite { name } => {
+                    code.push(format!("import {{ {} }} from 'console'", name));
+                }
                 crate::op::Op::EternalAssign { offset, arg } => match arg {
                     crate::op::Arg::Local(local) => {
                         code.push(format!("    _{} = _{}", offset, local));

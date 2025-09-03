@@ -1,7 +1,7 @@
 use super::error::ParseError;
 
 use crate::{
-    ast::{Expression, FunctionArgs, Statement},
+    ast::{Expression, FunctionArgs, Statement, UnaryOp},
     commons::Loc,
     i32,
     lexer::{Lexer, Token, TokenKind},
@@ -122,7 +122,7 @@ impl<'a> Parser<'a> {
             TokenKind::Invite => self.parse_invite(token.loc).map(Some),
             TokenKind::Foreseen => self.parse_foreseen(token.loc).map(Some),
             TokenKind::Until => self.parse_until(token.loc).map(Some),
-            TokenKind::Vow => todo!("Type alias"),
+            TokenKind::Vow => self.parse_vow(token.loc).map(Some),
             TokenKind::EOF => Ok(None),
             _ => Err(ParseError::UnexpectedToken {
                 found: token.kind,
@@ -146,6 +146,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Equal => {
                 let value = self.expression(loc)?;
+                self.expect_kind(token.loc, TokenKind::SemiColon)?;
                 Ok(vec![Statement::Assignment { name, value }])
             }
             _ => Err(ParseError::UnexpectedToken {
@@ -204,6 +205,47 @@ impl<'a> Parser<'a> {
             return_type: Some(type_annotation),
             body,
         }])
+    }
+
+    fn parse_vow(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
+        let (name, next_loc) = self.get_indent(loc)?;
+        let token = self.next_token(next_loc)?;
+        let mut annotation = None;
+        if token.kind == TokenKind::Equal {
+            let primary = self.expression(token.loc)?;
+            self.expect_kind(token.loc, TokenKind::SemiColon)?;
+            return Ok(vec![
+                Statement::Eternal {
+                    name: name.to_owned(),
+                    annotation: None,
+                },
+                Statement::Assignment {
+                    name: name,
+                    value: primary,
+                },
+            ]);
+        } else if token.kind == TokenKind::Colon {
+            let (annon, next_loc) = self.get_indent(loc)?;
+            annotation = Some(annon);
+
+            if token.kind == TokenKind::Equal {
+                let primary = self.expression(next_loc)?;
+                self.expect_kind(token.loc, TokenKind::SemiColon)?;
+                return Ok(vec![
+                    Statement::Eternal {
+                        name: name.to_owned(),
+                        annotation,
+                    },
+                    Statement::Assignment {
+                        name: name,
+                        value: primary,
+                    },
+                ]);
+            }
+        }
+
+        self.expect_kind(token.loc, TokenKind::SemiColon)?;
+        Ok(vec![Statement::Vow { name, annotation }])
     }
 
     fn parse_eternal(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
@@ -294,6 +336,14 @@ impl<'a> Parser<'a> {
         }])
     }
 
+    fn parse_bang(&mut self, loc: Loc) -> Result<Expression, ParseError> {
+        let right = self.parse_primary(loc)?;
+        Ok(Expression::Unary {
+            op: UnaryOp::Not,
+            arg: Box::new(right),
+        })
+    }
+
     fn expression(&mut self, loc: Loc) -> Result<Expression, ParseError> {
         self.bin_expression(0, loc)
     }
@@ -328,6 +378,7 @@ impl<'a> Parser<'a> {
         match token.kind {
             TokenKind::IntLiteral(int) => Ok(Expression::Literal(i32!(int as i32))),
             TokenKind::StringLiteral(str) => Ok(Expression::Literal(string!(str))),
+            TokenKind::Bang => Ok(self.parse_bang(token.loc)?),
             TokenKind::Ident(name) => {
                 let args = match self.peek_token() {
                     Some(tok) if tok.kind == TokenKind::OParen => {
