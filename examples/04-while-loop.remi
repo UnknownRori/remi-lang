@@ -1,8 +1,10 @@
+invite printf;
+
 spellcard main() i32 {
     vow a = 0;
 
     until a < 10  {
-        say("Hello!\n");
+        printf("Hello!\n");
         a = a + 1;
     }
 

@@ -1,4 +1,4 @@
-invite printf
+invite printf;
 
 spellcard main() i32 {
     eternal a = 69;
