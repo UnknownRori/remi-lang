@@ -1,7 +1,7 @@
 use clap::Parser;
 
 use crate::{
-    codegen::{Codegen, IRCodegen, JavascriptCodegen},
+    codegen::{Codegen, IRCodegen, JavascriptCodegen, WindowsX86_64},
     compiler::Compiler,
     lexer::Lexer,
     parser::parser::Parser as RemiParser,
@@ -14,6 +14,7 @@ use std::{
     error::Error,
     fs::File,
     io::{Read, Write},
+    os::windows::process::CommandExt,
 };
 
 mod args;
@@ -29,8 +30,11 @@ impl CLI {
 
         let ircodegen: Box<dyn Codegen> = Box::new(IRCodegen);
         let jscodegen: Box<dyn Codegen> = Box::new(JavascriptCodegen::new());
+        let windows_x86_64: Box<dyn Codegen> = Box::new(WindowsX86_64::new());
+
         target.insert(Target::IR, ircodegen);
         target.insert(Target::Javascript, jscodegen);
+        target.insert(Target::WindowsX86_64, windows_x86_64);
 
         Self {
             target,
@@ -41,26 +45,102 @@ impl CLI {
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         match self.args.command.clone() {
             args::Command::Run { .. } => todo!(),
-            args::Command::Compile { src, out, arch, .. } => {
+            args::Command::Compile {
+                src,
+                out,
+                arch,
+                linker_flag,
+                ..
+            } => {
                 let mut body = String::new();
                 let mut fd = File::open(src)?;
                 fd.read_to_string(&mut body)?;
 
-                let mut fd_out = File::create(out)?;
-                match arch {
-                    Some(arch) => {
-                        let op = self.compile(arch, body)?;
-                        fd_out.write(op.as_bytes())?;
-                        Ok(())
-                    }
-                    None => {
-                        let op = self.compile(Target::IR, body)?;
-                        fd_out.write(op.as_bytes())?;
-                        Ok(())
-                    }
+                let asm_file_name = format!("{}.asm", out);
+                let obj_file_name = format!("{}.o", out);
+
+                {
+                    match arch {
+                        Some(arch) => match arch {
+                            Target::LinuxX86_64 | Target::WindowsX86_64 => {
+                                self.build(asm_file_name, obj_file_name, out, linker_flag)?;
+                            }
+                            Target::IR => {
+                                let mut fd_out = File::create(out)?;
+                                let op = self.compile(arch, body)?;
+                                fd_out.write_all(op.as_bytes())?;
+                                fd_out.flush()?;
+                            }
+                            _ => {}
+                        },
+                        None => {
+                            #[cfg(target_os = "windows")]
+                            let arch = arch.unwrap_or(crate::target::Target::WindowsX86_64);
+
+                            #[cfg(target_os = "linux")]
+                            let arch = arch.unwrap_or(crate::target::Target::LinuxX86_64);
+
+                            {
+                                let mut fd_out = File::create(&asm_file_name)?;
+                                let op = self.compile(arch, body)?;
+                                fd_out.write_all(op.as_bytes())?;
+                                fd_out.flush()?;
+                            }
+
+                            self.build(asm_file_name, obj_file_name, out, linker_flag)?;
+                        }
+                    };
                 }
+
+                Ok(())
             }
         }
+    }
+
+    fn build(
+        &mut self,
+        asm_file_name: String,
+        obj_file_name: String,
+        out: String,
+        linker_flag: Option<String>,
+    ) -> Result<(), Box<dyn Error>> {
+        {
+            let mut a = std::process::Command::new("fasm");
+            a.args([asm_file_name, obj_file_name.clone()]);
+            a.stdout(std::io::stdout());
+            println!(
+                "{} {}",
+                a.get_program().to_string_lossy(),
+                a.get_args()
+                    .map(|a| a.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+            let b = a.output()?;
+            unsafe {
+                eprintln!("{}", String::from_utf8_unchecked(b.stderr));
+            };
+        }
+
+        {
+            let mut a = std::process::Command::new("gcc");
+            a.args([obj_file_name, "-o".to_owned(), out]);
+            a.raw_arg(linker_flag.unwrap_or(String::new()));
+            a.stdout(std::io::stdout());
+            println!(
+                "{} {}",
+                a.get_program().to_string_lossy(),
+                a.get_args()
+                    .map(|a| a.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+            let b = a.output()?;
+            unsafe {
+                eprintln!("{}", String::from_utf8_unchecked(b.stderr));
+            };
+        }
+        Ok(())
     }
 
     fn compile(&mut self, arch: Target, src_code: String) -> Result<String, Box<dyn Error>> {

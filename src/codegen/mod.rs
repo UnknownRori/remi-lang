@@ -1,10 +1,12 @@
 mod ir;
 mod javascript;
+mod windows_x86_64;
 
 use std::{error::Error, fmt::Write};
 
 pub use ir::*;
 pub use javascript::*;
+pub use windows_x86_64::*;
 
 use crate::{compiler::Compiler, op::Op};
 

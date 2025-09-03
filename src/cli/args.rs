@@ -39,6 +39,9 @@ pub enum Command {
         out: String,
 
         #[arg(short, long)]
+        linker_flag: Option<String>,
+
+        #[arg(short, long)]
         arch: Option<Target>,
 
         #[arg(short, long, help = "increase verbosity of output")]

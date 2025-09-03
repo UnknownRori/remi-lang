@@ -79,13 +79,14 @@ impl Compiler {
                 }
                 Statement::Invite { name } => {
                     self.spellcard.insert(
-                        name,
+                        name.to_owned(),
                         FunctionSymbol {
                             args: vec![],
                             storage: FunctionStorage::External,
                             return_type: "void".to_string(),
                         },
                     );
+                    ops.push(Op::Invite { name });
                 }
                 Statement::Eternal { name, .. } => {
                     let offset = scope.alloc_local(&name);

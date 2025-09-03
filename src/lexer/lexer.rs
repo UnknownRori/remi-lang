@@ -158,7 +158,8 @@ impl<'a> Lexer<'a> {
             }
             '"' => {
                 self.skip_only(1);
-                let (chop, loc) = self.chop_while(|a| *a != '"');
+                let (mut chop, loc) = self.chop_while(|a| *a != '"');
+                chop = chop.replace("\\n", "\n");
                 self.skip_only(1);
                 self.loc_add(0, 2);
                 Some(Token {

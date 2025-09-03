@@ -29,9 +29,9 @@ For more information on dōjin culture,
 
 |Name            | Core | FFI |
 |----------------|------|-----|
-|Windows x86_64  |  🔧  |  ✖️  |
+|Windows x86_64  |  🔧  |  🔧 |
 |Linux x86_64    |  🔧  |  ✖️  |
-|JavaScript      |  ✖️   |  ✖️  |
+|JavaScript      |  🔧  |  ✖️  |
 |Byte Code       |  ✖️   |  ✖️  |
 
 - ✅ Well Supported
@@ -49,8 +49,8 @@ For more information on dōjin culture,
 ## Dependency
 
 - [Rust](https://rustup.rs/) - Compiler written in
-- [Fasm](https://flatassembler.net/) - Assembler
-- -
+- [Fasm](https://flatassembler.net/) - Assembler that compile assembly code into .o file that the Remi-lang compiler generated
+- [gcc](https://gcc.gnu.org/) - Link the .o file into final executable
 
 ## License
 
