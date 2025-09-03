@@ -1,6 +1,6 @@
 use crate::compiler::Compiler;
 
-use super::Codegen;
+use super::{Codegen, CodegenError};
 
 pub struct JavascriptCodegen;
 
@@ -85,6 +85,7 @@ impl Codegen for JavascriptCodegen {
                     code.push(format!("    {}({});", name, arg));
                 }
                 crate::op::Op::Ret(arg) => {}
+                other => Err(CodegenError::Unsupported { op: other })?,
             }
         }
         self.generate_epilog(&mut code);

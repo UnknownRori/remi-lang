@@ -12,6 +12,20 @@ pub enum BinOp {
     Less,
 }
 
+impl std::fmt::Display for BinOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinOp::Add => f.write_str("+"),
+            BinOp::Sub => f.write_str("-"),
+            BinOp::Mul => f.write_str("*"),
+            BinOp::Div => f.write_str("/"),
+            BinOp::Equal => f.write_str("=="),
+            BinOp::Greater => f.write_str(">"),
+            BinOp::Less => f.write_str("<"),
+        }
+    }
+}
+
 impl TryFrom<TokenKind> for BinOp {
     type Error = ();
 

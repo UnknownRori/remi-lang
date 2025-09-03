@@ -3,7 +3,7 @@ use crate::{
     op::{self, Arg},
 };
 
-use super::Codegen;
+use super::{Codegen, CodegenError};
 
 pub struct WindowsX86_64;
 
@@ -40,15 +40,16 @@ impl Codegen for WindowsX86_64 {
         let mut offset = 0;
         for op in stmt {
             match op {
-                op::Op::StackAlloc(_) => {
-                    offset += 8;
-                    code.push(format!("    sub rsp, {}", 8));
+                op::Op::StackAlloc(count) => {
+                    offset += 8 * count;
+                    code.push(format!("    sub rsp, {}", 8 * count));
                     code.push(format!(""));
                 }
                 op::Op::Invite { name } => {
                     code.push(format!("extrn {}", name));
                 }
                 op::Op::EternalAssign { offset, arg } => {
+                    code.push(format!("    ; Eternal Assign"));
                     match arg {
                         Arg::Local(id) => {
                             code.push(format!("    mov rcx, [rbp-{}]", (id + 1) * 8));
@@ -67,13 +68,17 @@ impl Codegen for WindowsX86_64 {
 
                     code.push(format!(""));
                 }
-                op::Op::Label(name) => {
-                    // TODO : Make sure to save the stack frame
+                op::Op::Function(name) => {
                     code.push(format!("{}:", name));
+                    code.push(format!("    ; Prolog"));
                     code.push(format!("    push rbp"));
                     code.push(format!("    mov rbp, rsp"));
                 }
+                op::Op::Label(name) => {
+                    code.push(format!("{}:", name));
+                }
                 op::Op::Call { name, args } => {
+                    code.push(format!("    ; Calling"));
                     const REGISTER: [&str; 4] = ["rcx", "rdx", "r8", "r9"];
                     for (reg, arg) in REGISTER.iter().zip(args.iter()) {
                         match arg {
@@ -97,6 +102,7 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!(""));
                 }
                 op::Op::Ret(arg) => {
+                    code.push(format!("    ; Epilog"));
                     match arg {
                         Arg::Local(id) => code.push(format!("    mov rcx, [rbp-{}]", id * 8)),
                         Arg::Literal(value) => code.push(format!("    mov rcx, {}", value.str())),
@@ -109,6 +115,65 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    pop rbp"));
                     code.push(format!("    ret"));
                     offset = 0;
+                }
+                op::Op::BinOp {
+                    binop,
+                    offset,
+                    lhs,
+                    rhs,
+                } => {
+                    code.push(format!("    ; Bin Op {}", binop));
+                    match lhs {
+                        Arg::Local(offset) => {
+                            code.push(format!("    mov rax, [rbp-{}]", (offset + 1) * 8))
+                        }
+                        Arg::Literal(value) => code.push(format!("    mov rax, {}", value.str())),
+                        Arg::DataOffset(offset) => {
+                            code.push(format!("    mov rax, [eternal+{}]", offset))
+                        }
+                    }
+                    match binop {
+                        crate::ast::BinOp::Add => todo!(),
+                        crate::ast::BinOp::Sub => todo!(),
+                        crate::ast::BinOp::Mul => todo!(),
+                        crate::ast::BinOp::Div => todo!(),
+                        crate::ast::BinOp::Equal => todo!(),
+                        crate::ast::BinOp::Greater => {
+                            code.push("    xor rbx, rbx".to_owned());
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    cmp rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    cmp rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    cmp rax, [{}]", offset))
+                                }
+                            }
+                            code.push("    setg bl".to_owned());
+                            code.push(format!("    mov [rbp-{}], rbx", (offset + 1) * 8));
+                        }
+                        crate::ast::BinOp::Less => todo!(),
+                    }
+
+                    code.push(format!(""));
+                }
+                op::Op::Jmp { name } => code.push(format!("    jmp {}", name)),
+                op::Op::JmpIfNot { name, arg } => {
+                    code.push(format!("    ; Jump if not"));
+                    match arg {
+                        Arg::Local(offset) => {
+                            code.push(format!("    mov rax, [rbp-{}]", (offset + 1) * 8))
+                        }
+                        Arg::Literal(value) => code.push(format!("    mov rax, {}", value.str())),
+                        Arg::DataOffset(offset) => {
+                            code.push(format!("    mov rax, [eternal+{}]", offset))
+                        }
+                    }
+                    code.push(format!("    test rax, rax"));
+                    code.push(format!("    jz {}", name));
+                    code.push(format!(""));
                 }
             }
         }

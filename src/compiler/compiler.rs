@@ -19,6 +19,7 @@ pub struct Scope {
     frame_alloc: FrameAlloc,
     next_local: usize,
     locals: HashMap<String, usize>,
+    label_count: usize,
 }
 
 impl Scope {
@@ -27,6 +28,7 @@ impl Scope {
             frame_alloc: FrameAlloc::default(),
             locals: HashMap::new(),
             next_local: 0,
+            label_count: 0,
         }
     }
 
@@ -34,6 +36,12 @@ impl Scope {
         let id = self.next_local;
         self.next_local += 1;
         self.locals.insert(name.to_owned(), id);
+        id
+    }
+
+    pub fn alloc_label(&mut self) -> usize {
+        let id = self.label_count;
+        self.label_count += 1;
         id
     }
 
@@ -91,7 +99,6 @@ impl Compiler {
                 Statement::Eternal { name, .. } => {
                     let offset = scope.alloc_local(&name);
                     scope.locals.insert(name, offset);
-                    ops.push(Op::StackAlloc(offset));
                 }
                 Statement::Vow { .. } => todo!(),
                 Statement::Assignment { name, value } => {
@@ -107,7 +114,44 @@ impl Compiler {
 
                     ops.push(Op::EternalAssign { offset, arg });
                 }
-                Statement::Foreseen { .. } => todo!(),
+                Statement::Foreseen {
+                    condition,
+                    then_branch,
+                    else_branch,
+                } => {
+                    let id = scope.alloc_label();
+                    let otherwise = format!(".L{}", id);
+
+                    let id = scope.alloc_label();
+                    let end = format!(".L{}", id);
+
+                    let arg = self.parse_expression(scope, &mut ops, condition)?;
+                    let mut then_body = self.compile_statement(scope, then_branch)?;
+                    match else_branch {
+                        Some(body) => {
+                            let mut else_body = self.compile_statement(scope, body)?;
+
+                            ops.push(Op::JmpIfNot {
+                                name: otherwise.clone(),
+                                arg,
+                            });
+                            ops.append(&mut then_body);
+                            ops.push(Op::Jmp {
+                                name: end.to_owned(),
+                            });
+                            ops.push(Op::Label(otherwise));
+                            ops.append(&mut else_body);
+                        }
+                        None => {
+                            ops.push(Op::JmpIfNot {
+                                name: end.clone(),
+                                arg,
+                            });
+                            ops.append(&mut then_body);
+                        }
+                    }
+                    ops.push(Op::Label(end));
+                }
                 Statement::Until { .. } => todo!(),
                 Statement::SpellCard { name, body, .. } => {
                     let mut scope = Scope::new();
@@ -120,7 +164,8 @@ impl Compiler {
                             storage: FunctionStorage::Internal,
                         },
                     );
-                    ops.push(Op::Label(name));
+                    ops.push(Op::Function(name));
+                    ops.push(Op::StackAlloc(scope.next_local));
                     ops.append(&mut body);
                 }
                 Statement::Offer(expression) => {
@@ -159,7 +204,20 @@ impl Compiler {
                     })?;
                 Ok(Arg::Local(offset))
             }
-            Expression::Binary { op, left, right } => todo!(),
+            Expression::Binary { op, left, right } => {
+                let lhs = self.parse_expression(scope, ops, *left)?;
+                let rhs = self.parse_expression(scope, ops, *right)?;
+                let offset = scope.alloc_local("__temp");
+
+                ops.push(Op::BinOp {
+                    binop: op,
+                    offset,
+                    lhs,
+                    rhs,
+                });
+
+                Ok(Arg::Local(offset))
+            }
             Expression::Call { function, args } => {
                 let _spellcard =
                     self.spellcard

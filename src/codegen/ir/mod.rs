@@ -11,15 +11,16 @@ impl Codegen for IRCodegen {
         ops: Vec<crate::op::Op>,
     ) -> Result<String, CodegenError> {
         let mut body: Vec<String> = vec![];
+        body.push("Remi IR v0.0\n".to_owned());
         body.push("Data:".to_owned());
         for (i, data) in compiler.eternal_value.windows(8).enumerate() {
-            let mut buf = format!("    {:#04x}: ", i * 8);
+            let mut buf = format!("    {:#06x}: ", i * 8);
             for byte in data {
                 buf.push_str(&format!("{:#04x} ", byte));
             }
             body.push(buf);
         }
-        body.push("Text:".to_owned());
+        body.push("\nText:".to_owned());
         for op in ops {
             match op {
                 crate::op::Op::StackAlloc(size) => {
@@ -31,12 +32,29 @@ impl Codegen for IRCodegen {
                     offset,
                     dump_args(&arg)
                 )),
+                crate::op::Op::BinOp {
+                    binop,
+                    offset,
+                    lhs,
+                    rhs,
+                } => body.push(format!(
+                    "        BinOp {} {} {} {}",
+                    binop,
+                    offset,
+                    dump_args(&lhs),
+                    dump_args(&rhs)
+                )),
+                crate::op::Op::Function(name) => body.push(format!("    {}():", name)),
                 crate::op::Op::Label(name) => body.push(format!("    {}:", name)),
                 crate::op::Op::Call { name, args } => {
                     let args = args.iter().map(dump_args).collect::<Vec<_>>().join(", ");
                     body.push(format!("        Call({}, [{}])", name, args))
                 }
                 crate::op::Op::Ret(arg) => body.push(format!("        Ret({})", dump_args(&arg))),
+                crate::op::Op::Jmp { name } => body.push(format!("        Jmp({})", name)),
+                crate::op::Op::JmpIfNot { name, arg } => {
+                    body.push(format!("        Jne({}, {})", name, dump_args(&arg)))
+                }
             }
         }
         Ok(body.join("\n"))
