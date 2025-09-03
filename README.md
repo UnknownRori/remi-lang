@@ -44,13 +44,22 @@ For more information on dōjin culture,
 
 ## Quickstart
 
--
+TODO:
 
 ## Dependency
 
 - [Rust](https://rustup.rs/) - Compiler written in
 - [Fasm](https://flatassembler.net/) - Assembler that compile assembly code into .o file that the Remi-lang compiler generated
 - [gcc](https://gcc.gnu.org/) - Link the .o file into final executable
+
+### Development
+
+```sh
+git clone https://github.com/UnknownRori/remi-lang
+cd remi-lang
+
+cargo test
+```
 
 ## License
 
