@@ -51,29 +51,34 @@ impl Codegen for WindowsX86_64 {
                 op::Op::EternalAssign { offset, arg } => {
                     match arg {
                         Arg::Local(id) => {
-                            code.push(format!("    mov rcx, [rbp-{}]", id * 8));
-                            code.push(format!("    mov [rbp-{}], rcx", offset * 8));
+                            code.push(format!("    mov rcx, [rbp-{}]", (id + 1) * 8));
+                            code.push(format!("    mov [rbp-{}], rcx", (offset + 1) * 8));
                         }
                         Arg::Literal(value) => code.push(format!(
                             "    mov qword [rbp-{}], {}",
-                            offset * 8,
+                            (offset + 1) * 8,
                             value.str()
                         )),
-                        Arg::DataOffset(offset) => {
-                            code.push(format!("    mov rcx, eternal+{}", offset));
-                            code.push(format!("    mov qword [rbp-{}], rcx", offset));
+                        Arg::DataOffset(data) => {
+                            code.push(format!("    mov rcx, eternal+{}", data));
+                            code.push(format!("    mov qword [rbp-{}], rcx", (offset + 1) * 8));
                         }
                     }
 
                     code.push(format!(""));
                 }
-                op::Op::Label(name) => code.push(format!("{}:", name)),
+                op::Op::Label(name) => {
+                    // TODO : Make sure to save the stack frame
+                    code.push(format!("{}:", name));
+                    code.push(format!("    push rbp"));
+                    code.push(format!("    mov rbp, rsp"));
+                }
                 op::Op::Call { name, args } => {
                     const REGISTER: [&str; 4] = ["rcx", "rdx", "r8", "r9"];
                     for (reg, arg) in REGISTER.iter().zip(args.iter()) {
                         match arg {
                             Arg::Local(id) => {
-                                code.push(format!("    mov rax, [rbp-{}]", id * 8));
+                                code.push(format!("    mov rax, [rbp-{}]", (id + 1) * 8));
                                 code.push(format!("    mov {}, rax", reg));
                             }
                             Arg::Literal(value) => {
@@ -85,7 +90,10 @@ impl Codegen for WindowsX86_64 {
                             }
                         }
                     }
+                    let shadow = shadow_stack_space(offset);
+                    code.push(format!("    sub rsp, {}", shadow - offset));
                     code.push(format!("    call {}", name));
+                    code.push(format!("    add rsp, {}", shadow - offset));
                     code.push(format!(""));
                 }
                 op::Op::Ret(arg) => {
@@ -98,6 +106,7 @@ impl Codegen for WindowsX86_64 {
                     }
 
                     code.push(format!("    add rsp, {}", offset));
+                    code.push(format!("    pop rbp"));
                     code.push(format!("    ret"));
                     offset = 0;
                 }
@@ -105,4 +114,10 @@ impl Codegen for WindowsX86_64 {
         }
         Ok(code.join("\n"))
     }
+}
+fn shadow_stack_space(locals_size: usize) -> usize {
+    let shadow_space = 32;
+    let total = locals_size + shadow_space;
+
+    (total + 15) & !15
 }

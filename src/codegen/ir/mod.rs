@@ -1,4 +1,4 @@
-use crate::compiler::Compiler;
+use crate::{compiler::Compiler, op::Arg};
 
 use super::{Codegen, CodegenError};
 
@@ -12,10 +12,10 @@ impl Codegen for IRCodegen {
     ) -> Result<String, CodegenError> {
         let mut body: Vec<String> = vec![];
         body.push("Data:".to_owned());
-        for data in compiler.eternal_value.windows(8) {
-            let mut buf = "    ".to_owned();
+        for (i, data) in compiler.eternal_value.windows(8).enumerate() {
+            let mut buf = format!("    {:#04x}: ", i * 8);
             for byte in data {
-                buf.push_str(&format!("{:#02x} ", byte));
+                buf.push_str(&format!("{:#04x} ", byte));
             }
             body.push(buf);
         }
@@ -23,19 +23,30 @@ impl Codegen for IRCodegen {
         for op in ops {
             match op {
                 crate::op::Op::StackAlloc(size) => {
-                    body.push(format!("        StackAlloc({})", size))
+                    body.push(format!("        StackAlloc({:#04x})", size))
                 }
                 crate::op::Op::Invite { name } => body.push(format!("        Invite({})", name)),
-                crate::op::Op::EternalAssign { offset, arg } => {
-                    body.push(format!("        EternalAssign({}, {})", offset, arg))
-                }
+                crate::op::Op::EternalAssign { offset, arg } => body.push(format!(
+                    "        EternalAssign({:#04x}, {})",
+                    offset,
+                    dump_args(&arg)
+                )),
                 crate::op::Op::Label(name) => body.push(format!("    {}:", name)),
                 crate::op::Op::Call { name, args } => {
-                    body.push(format!("        Call({}, {:?})", name, args))
+                    let args = args.iter().map(dump_args).collect::<Vec<_>>().join(", ");
+                    body.push(format!("        Call({}, [{}])", name, args))
                 }
-                crate::op::Op::Ret(arg) => body.push(format!("        Ret({})", arg)),
+                crate::op::Op::Ret(arg) => body.push(format!("        Ret({})", dump_args(&arg))),
             }
         }
         Ok(body.join("\n"))
+    }
+}
+
+fn dump_args(arg: &Arg) -> String {
+    match arg {
+        Arg::Local(offset) => format!("Local({:#04x})", offset),
+        Arg::Literal(value) => value.str(),
+        Arg::DataOffset(offset) => format!("DataOffset({:#04x})", offset),
     }
 }
