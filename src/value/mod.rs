@@ -4,6 +4,15 @@ pub enum Value {
     String(String),
 }
 
+impl Value {
+    pub fn str(&self) -> String {
+        match self {
+            Value::I32(int) => format!("{}", int),
+            Value::String(str) => format!("{}", str),
+        }
+    }
+}
+
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

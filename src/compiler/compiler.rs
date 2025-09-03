@@ -90,6 +90,7 @@ impl Compiler {
                 Statement::Eternal { name, .. } => {
                     let offset = scope.alloc_local(&name);
                     scope.locals.insert(name, offset);
+                    ops.push(Op::StackAlloc(offset));
                 }
                 Statement::Vow { .. } => todo!(),
                 Statement::Assignment { name, value } => {
@@ -143,6 +144,7 @@ impl Compiler {
                     let mut bytes = val.clone().into_bytes();
                     let offset = self.eternal_value.len();
                     self.eternal_value.append(&mut bytes);
+                    self.eternal_value.push(0);
                     self.eternal.insert(val, offset);
                     Ok(Arg::DataOffset(offset))
                 }
@@ -158,7 +160,7 @@ impl Compiler {
             }
             Expression::Binary { op, left, right } => todo!(),
             Expression::Call { function, args } => {
-                let spellcard =
+                let _spellcard =
                     self.spellcard
                         .get(&function)
                         .ok_or(CompilerError::UnknownFunction {

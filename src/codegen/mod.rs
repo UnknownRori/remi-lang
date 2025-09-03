@@ -1,8 +1,10 @@
 mod ir;
+mod javascript;
 
 use std::{error::Error, fmt::Write};
 
 pub use ir::*;
+pub use javascript::*;
 
 use crate::{compiler::Compiler, op::Op};
 

@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::target::Target;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Clone, Debug)]
 #[command(
     version = "0.0-alpha",
     about = "Remi Programming Language written in Rust with FASM backend",
@@ -16,7 +16,7 @@ pub struct Args {
     pub command: Command,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     #[command(about = "Run file inside a VM", long_about = "Run file inside a VM ")]
     Run {
