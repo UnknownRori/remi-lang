@@ -2,7 +2,7 @@ mod ir;
 mod javascript;
 mod windows_x86_64;
 
-use std::{error::Error, fmt::Write};
+use std::error::Error;
 
 pub use ir::*;
 pub use javascript::*;

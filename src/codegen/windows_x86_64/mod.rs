@@ -3,7 +3,7 @@ use crate::{
     op::{self, Arg},
 };
 
-use super::{Codegen, CodegenError};
+use super::Codegen;
 
 pub struct WindowsX86_64;
 
@@ -22,12 +22,14 @@ impl WindowsX86_64 {
         body.push("; Remi v0.0 windows x86_64 assembly".to_string());
         body.push("format ms64 coff".to_string());
         body.push("section '.data' readable writeable".to_string());
-        body.push(format!("    eternal: db {}", bytes.join(", ")));
+        if bytes.len() > 0 {
+            body.push(format!("    eternal: db {}", bytes.join(", ")));
+        }
         body.push("section '.text' code readable executable".to_string());
         body.push("public main".to_string());
     }
 
-    pub fn generate_epilog(&mut self, body: &mut Vec<String>) {}
+    pub fn generate_epilog(&mut self, _body: &mut Vec<String>) {}
 }
 
 impl Codegen for WindowsX86_64 {
@@ -106,12 +108,12 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    ; Epilog"));
                     if let Some(arg) = arg {
                         match arg {
-                            Arg::Local(id) => code.push(format!("    mov rcx, [rbp-{}]", id * 8)),
+                            Arg::Local(id) => code.push(format!("    mov rax, [rbp-{}]", id * 8)),
                             Arg::Literal(value) => {
-                                code.push(format!("    mov rcx, {}", value.str()))
+                                code.push(format!("    mov rax, {}", value.str()))
                             }
                             Arg::DataOffset(offset) => {
-                                code.push(format!("    mov rcx, [eternal+{}]", offset))
+                                code.push(format!("    mov rax, [eternal+{}]", offset))
                             }
                         }
                     }

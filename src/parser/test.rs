@@ -22,7 +22,7 @@ spellcard main() i32 {
         name: "main".to_owned(),
         args: vec![],
         return_type: Some("i32".to_string()),
-        body: vec![Statement::Offer(Expression::Literal(i32!(69)))],
+        body: vec![Statement::Offer(Some(Expression::Literal(i32!(69))))],
     }];
 
     let lexer = Lexer::new(&chars);
@@ -56,7 +56,7 @@ spellcard main() i32 {
                 name: "foo".to_owned(),
                 value: Expression::Literal(i32!(69)),
             },
-            Statement::Offer(Expression::Variable("foo".to_owned())),
+            Statement::Offer(Some(Expression::Variable("foo".to_owned()))),
         ],
     }];
 
@@ -95,7 +95,7 @@ spellcard main() i32 {
                     right: Box::new(Expression::Literal(i32!(34))),
                 },
             },
-            Statement::Offer(Expression::Variable("foo".to_owned())),
+            Statement::Offer(Some(Expression::Variable("foo".to_owned()))),
         ],
     }];
 
@@ -138,7 +138,7 @@ spellcard main() i32 {
                     }),
                 },
             },
-            Statement::Offer(Expression::Variable("foo".to_owned())),
+            Statement::Offer(Some(Expression::Variable("foo".to_owned()))),
         ],
     }];
 
@@ -434,7 +434,9 @@ spellcard main(foo: i32) i32 {
             annotation: "i32".to_string(),
         }],
         return_type: Some("i32".to_string()),
-        body: vec![Statement::Offer(Expression::Variable("foo".to_owned()))],
+        body: vec![Statement::Offer(Some(Expression::Variable(
+            "foo".to_owned(),
+        )))],
     }];
 
     let lexer = Lexer::new(&chars);
@@ -467,7 +469,9 @@ spellcard main(foo: i32, bar: i32) i32 {
             },
         ],
         return_type: Some("i32".to_string()),
-        body: vec![Statement::Offer(Expression::Variable("foo".to_owned()))],
+        body: vec![Statement::Offer(Some(Expression::Variable(
+            "foo".to_owned(),
+        )))],
     }];
 
     let lexer = Lexer::new(&chars);

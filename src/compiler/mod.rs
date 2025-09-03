@@ -1,4 +1,3 @@
-mod alloc;
 mod compiler;
 mod error;
 mod symbol;

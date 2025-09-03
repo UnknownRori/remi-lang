@@ -68,7 +68,7 @@ impl Codegen for JavascriptCodegen {
                         code.push(format!("    _{} = readString({})", offset, offset))
                     }
                 },
-                crate::op::Op::Label(name) => {}
+                crate::op::Op::Label(_name) => {}
                 crate::op::Op::Call { name, args } => {
                     let mapped = args.iter().map(|a| match a {
                         crate::op::Arg::Local(offset) => format!("_{}", offset),
@@ -84,7 +84,7 @@ impl Codegen for JavascriptCodegen {
                     let arg = arg.join(", ");
                     code.push(format!("    {}({});", name, arg));
                 }
-                crate::op::Op::Ret(arg) => {}
+                crate::op::Op::Ret(_arg) => {}
                 other => Err(CodegenError::Unsupported { op: other })?,
             }
         }

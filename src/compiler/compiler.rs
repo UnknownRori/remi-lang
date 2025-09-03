@@ -5,18 +5,15 @@ use crate::{
     commons::Loc,
     i32,
     op::{Arg, Op},
-    string,
     value::Value,
 };
 
 use super::{
     CompilerError,
-    alloc::FrameAlloc,
     symbol::{FunctionStorage, FunctionSymbol},
 };
 
 pub struct Scope {
-    frame_alloc: FrameAlloc,
     next_local: usize,
     locals: HashMap<String, usize>,
     label_count: usize,
@@ -25,7 +22,6 @@ pub struct Scope {
 impl Scope {
     pub fn new() -> Self {
         Self {
-            frame_alloc: FrameAlloc::default(),
             locals: HashMap::new(),
             next_local: 0,
             label_count: 0,
