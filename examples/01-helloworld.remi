@@ -1,4 +1,6 @@
+invite printf
+
 spellcard main() i32 {
-    say("Hello from Remi Lang!\n");
+    printf("Hello from Remi Lang!\n");
     offer 0;
 }

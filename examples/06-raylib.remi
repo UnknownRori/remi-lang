@@ -1,0 +1,27 @@
+// ./target/debug/remi.exe compile -s ./examples/06-raylib.remi -o ./raylib-example -a windows-x86-64 -l="-L./raylib/ -lmsvcrt -luser32 -lkernel32 -lraylib -lopengl32 -lgdi32 -lwinmm" 
+invite printf;
+
+invite InitWindow;
+invite WindowShouldClose;
+invite BeginDrawing;
+invite EndDrawing;
+
+invite ClearBackground;
+
+spellcard main() i32 {
+    eternal title = "Hello Raylib!";
+    eternal width = 800;
+    eternal height = 600;
+
+    printf("Hello, World!\n");
+
+    InitWindow(width, height, title);
+
+    until !WindowShouldClose()  {
+        BeginDrawing();
+        ClearBackground(0xFF0000FF);
+        EndDrawing();
+    }
+
+    offer 0;
+}

@@ -1,9 +1,11 @@
+invite printf
+
 spellcard main() i32 {
     eternal moon = "Remilia";
     vow maid = "Sakuya";
 
-    say(moon);
-    say(maid);
+    printf(moon);
+    printf(maid);
 
     offer 0;
 }
