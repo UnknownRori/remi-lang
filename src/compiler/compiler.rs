@@ -101,7 +101,10 @@ impl Compiler {
                     let offset = scope.alloc_local(&name);
                     scope.locals.insert(name, offset);
                 }
-                Statement::Vow { .. } => todo!(),
+                Statement::Vow { name, .. } => {
+                    let offset = scope.alloc_local(&name);
+                    scope.locals.insert(name, offset);
+                }
                 Statement::Assignment { name, value } => {
                     let offset = scope
                         .locals
@@ -191,11 +194,16 @@ impl Compiler {
                     ops.push(Op::StackAlloc(scope.next_local));
                     ops.append(&mut body);
                 }
-                Statement::Offer(expression) => {
-                    let (arg, mut op) = self.parse_expression(scope, expression)?;
-                    ops.append(&mut op);
-                    ops.push(Op::Ret(arg));
-                }
+                Statement::Offer(expression) => match expression {
+                    Some(expression) => {
+                        let (arg, mut op) = self.parse_expression(scope, expression)?;
+                        ops.append(&mut op);
+                        ops.push(Op::Ret(Some(arg)));
+                    }
+                    None => {
+                        ops.push(Op::Ret(None));
+                    }
+                },
             }
         }
         Ok(ops)

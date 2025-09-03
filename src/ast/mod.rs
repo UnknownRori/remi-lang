@@ -106,5 +106,5 @@ pub enum Statement {
         return_type: Option<String>,
         body: Vec<Statement>,
     },
-    Offer(Expression),
+    Offer(Option<Expression>),
 }

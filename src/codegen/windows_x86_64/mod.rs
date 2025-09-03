@@ -19,6 +19,7 @@ impl WindowsX86_64 {
             .map(|b| format!("{}", b))
             .collect();
 
+        body.push("; Remi v0.0 windows x86_64 assembly".to_string());
         body.push("format ms64 coff".to_string());
         body.push("section '.data' readable writeable".to_string());
         body.push(format!("    eternal: db {}", bytes.join(", ")));
@@ -103,11 +104,15 @@ impl Codegen for WindowsX86_64 {
                 }
                 op::Op::Ret(arg) => {
                     code.push(format!("    ; Epilog"));
-                    match arg {
-                        Arg::Local(id) => code.push(format!("    mov rcx, [rbp-{}]", id * 8)),
-                        Arg::Literal(value) => code.push(format!("    mov rcx, {}", value.str())),
-                        Arg::DataOffset(offset) => {
-                            code.push(format!("    mov rcx, [eternal+{}]", offset))
+                    if let Some(arg) = arg {
+                        match arg {
+                            Arg::Local(id) => code.push(format!("    mov rcx, [rbp-{}]", id * 8)),
+                            Arg::Literal(value) => {
+                                code.push(format!("    mov rcx, {}", value.str()))
+                            }
+                            Arg::DataOffset(offset) => {
+                                code.push(format!("    mov rcx, [eternal+{}]", offset))
+                            }
                         }
                     }
 

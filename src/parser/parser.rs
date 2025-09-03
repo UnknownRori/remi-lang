@@ -182,8 +182,9 @@ impl<'a> Parser<'a> {
                     });
                 }
             };
-            self.expect_kind(loc, TokenKind::Colon)?;
-            let (annotation, _) = self.get_indent(loc)?;
+            let tok = self.next_token(loc)?;
+            self.expect_kind(tok.loc, TokenKind::Colon)?;
+            let (annotation, _) = self.get_indent(tok.loc)?;
             args.push(FunctionArgs {
                 name: name_param,
                 annotation,
@@ -215,7 +216,7 @@ impl<'a> Parser<'a> {
             let primary = self.expression(token.loc)?;
             self.expect_kind(token.loc, TokenKind::SemiColon)?;
             return Ok(vec![
-                Statement::Eternal {
+                Statement::Vow {
                     name: name.to_owned(),
                     annotation: None,
                 },
@@ -232,7 +233,7 @@ impl<'a> Parser<'a> {
                 let primary = self.expression(next_loc)?;
                 self.expect_kind(token.loc, TokenKind::SemiColon)?;
                 return Ok(vec![
-                    Statement::Eternal {
+                    Statement::Vow {
                         name: name.to_owned(),
                         annotation,
                     },
@@ -290,9 +291,20 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_offer(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {
-        let primary = self.expression(loc)?;
-        self.expect_kind(loc, TokenKind::SemiColon)?;
-        Ok(vec![Statement::Offer(primary)])
+        let loc = match self.peek_token().clone() {
+            Some(token) => match token.kind {
+                TokenKind::SemiColon => loc,
+                _ => {
+                    let primary = self.expression(loc)?;
+                    self.expect_kind(loc, TokenKind::SemiColon)?;
+                    return Ok(vec![Statement::Offer(Some(primary))]);
+                }
+            },
+            None => todo!(),
+        };
+
+        self.next_token(loc)?;
+        Ok(vec![Statement::Offer(None)])
     }
 
     fn parse_invite(&mut self, loc: Loc) -> Result<Vec<Statement>, ParseError> {

@@ -13,7 +13,7 @@ impl Codegen for IRCodegen {
         let mut body: Vec<String> = vec![];
         body.push("Remi IR v0.0\n".to_owned());
         body.push("Data:".to_owned());
-        for (i, data) in compiler.eternal_value.windows(8).enumerate() {
+        for (i, data) in compiler.eternal_value.chunks(8).enumerate() {
             let mut buf = format!("    {:#06x}: ", i * 8);
             for byte in data {
                 buf.push_str(&format!("{:#04x} ", byte));
@@ -41,7 +41,7 @@ impl Codegen for IRCodegen {
                     lhs,
                     rhs,
                 } => body.push(format!(
-                    "        BinOp {} {} {} {}",
+                    "        BinOp {:#04x} {} {} {}",
                     offset,
                     dump_args(&lhs),
                     binop,
@@ -53,7 +53,10 @@ impl Codegen for IRCodegen {
                     let args = args.iter().map(dump_args).collect::<Vec<_>>().join(", ");
                     body.push(format!("        Call({}, [{}])", name, args))
                 }
-                crate::op::Op::Ret(arg) => body.push(format!("        Ret({})", dump_args(&arg))),
+                crate::op::Op::Ret(arg) => match arg {
+                    Some(arg) => body.push(format!("        Ret({})", dump_args(&arg))),
+                    None => body.push(format!("        Ret(void)")),
+                },
                 crate::op::Op::Jmp { name } => body.push(format!("        Jmp({})", name)),
                 crate::op::Op::JmpIfNot { name, arg } => {
                     body.push(format!("        Jne({}, {})", name, dump_args(&arg)))

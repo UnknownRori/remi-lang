@@ -34,7 +34,7 @@ pub enum Op {
         name: String,
         args: Vec<Arg>,
     },
-    Ret(Arg),
+    Ret(Option<Arg>),
     Jmp {
         name: String,
     },
@@ -81,7 +81,10 @@ impl std::fmt::Display for Op {
             crate::op::Op::Call { name, args } => {
                 f.write_fmt(format_args!("Call({}, {:?})", name, args))
             }
-            crate::op::Op::Ret(arg) => f.write_fmt(format_args!("Ret({})", arg)),
+            crate::op::Op::Ret(arg) => match arg {
+                Some(arg) => f.write_fmt(format_args!("Ret({})", arg)),
+                None => f.write_fmt(format_args!("Ret(void)")),
+            },
             crate::op::Op::Jmp { name } => f.write_fmt(format_args!("Jmp {}", name)),
             crate::op::Op::JmpIfNot { name, arg } => {
                 f.write_fmt(format_args!("jnz {} {}", name, arg))
