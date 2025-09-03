@@ -1,0 +1,16 @@
+invite printf;
+
+spellcard main() i32 {
+    vow a = 0;
+    vow b = 1;
+    vow c = 0;
+
+    until a < 1000  {
+        printf("%d\n", a);
+        c  = a + b;
+        a = b;
+        b = c;
+    }
+
+    offer 0;
+}
