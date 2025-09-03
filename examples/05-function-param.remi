@@ -1,0 +1,15 @@
+invite printf;
+
+spellcard add(a: i32, b: i32) i32 {
+    offer a + b;
+}
+
+spellcard main() i32 {
+    vow a = add(35, 35);
+
+    foreseen a == 69 {
+        printf("Yoo 69\n");
+    }
+
+    offer 0;
+}

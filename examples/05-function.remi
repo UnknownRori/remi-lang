@@ -1,15 +1,14 @@
 invite printf;
 
-spellcard add(a: i32, b: i32) i32 {
-    offer a + b;
+spellcard hi() void {
+    printf("Hello!\n");
+    offer;
 }
 
 spellcard main() i32 {
-    vow a = add(35, 35);
+    hi();
 
-    if a == 69 {
-        printf("Yoo 69\n");
-    }
+    printf("Lorem ipsum!!\n");
 
     offer 0;
 }
