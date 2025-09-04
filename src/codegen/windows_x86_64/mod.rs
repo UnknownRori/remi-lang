@@ -3,7 +3,7 @@ use crate::{
     op::{self, Arg},
 };
 
-use super::Codegen;
+use super::{Codegen, utils::align_mem};
 
 pub struct WindowsX86_64;
 
@@ -40,12 +40,12 @@ impl Codegen for WindowsX86_64 {
     ) -> Result<String, super::CodegenError> {
         let mut code: Vec<String> = vec![];
         self.generate_prolog(&compiler, &mut code);
-        let mut offset = 0;
+        let mut offset = 32; // Shadow space
         for op in stmt {
             match op {
                 op::Op::StackAlloc(count) => {
-                    offset += 8 * count;
-                    code.push(format!("    sub rsp, {}", 8 * count));
+                    offset = align_mem(offset + (count * 8));
+                    code.push(format!("    sub rsp, {}", offset));
                     code.push(format!(""));
                 }
                 op::Op::Invite { name } => {
@@ -99,10 +99,7 @@ impl Codegen for WindowsX86_64 {
                             }
                         }
                     }
-                    let shadow = shadow_stack_space(offset);
-                    code.push(format!("    sub rsp, {}", shadow - offset));
                     code.push(format!("    call {}", name));
-                    code.push(format!("    add rsp, {}", shadow - offset));
                     code.push(format!(""));
                 }
                 op::Op::Ret(arg) => {
@@ -121,7 +118,9 @@ impl Codegen for WindowsX86_64 {
                         }
                     }
 
-                    code.push(format!("    add rsp, {}", offset));
+                    if offset > 0 {
+                        code.push(format!("    add rsp, {}", offset));
+                    }
                     code.push(format!("    pop rbp"));
                     code.push(format!("    ret"));
                 }
@@ -285,10 +284,4 @@ impl Codegen for WindowsX86_64 {
         }
         Ok(code.join("\n"))
     }
-}
-fn shadow_stack_space(locals_size: usize) -> usize {
-    let shadow_space = 32;
-    let total = locals_size + shadow_space;
-
-    (total + 15) & !15
 }

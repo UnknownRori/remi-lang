@@ -1,5 +1,6 @@
 mod ir;
 mod javascript;
+mod utils;
 mod windows_x86_64;
 
 use std::error::Error;
