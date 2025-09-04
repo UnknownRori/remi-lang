@@ -1,13 +1,19 @@
 use crate::{
     ast::{BinOp, Expression, FunctionArgs, Statement},
-    commons::Loc,
     i32,
-    lexer::{Lexer, Token, TokenKind},
+    lexer::Lexer,
     string,
 };
 
 use super::parser::*;
-use super::*;
+
+fn setup(body: &str) -> Vec<Statement> {
+    let chars = body.chars().collect::<Vec<_>>();
+    let lexer = Lexer::new(&chars);
+    let mut parser = Parser::new(lexer);
+    let ops = parser.parse().expect("Should parse correctly");
+    ops
+}
 
 #[test]
 fn parse_basic_source_code() {
@@ -16,7 +22,6 @@ spellcard main() i32 {
     offer 69;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
 
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
@@ -25,9 +30,7 @@ spellcard main() i32 {
         body: vec![Statement::Offer(Some(Expression::Literal(i32!(69))))],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -41,8 +44,6 @@ spellcard main() i32 {
     offer foo;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -60,9 +61,7 @@ spellcard main() i32 {
         ],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -76,8 +75,6 @@ spellcard main() i32 {
     offer foo;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -99,9 +96,7 @@ spellcard main() i32 {
         ],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -115,8 +110,6 @@ spellcard main() i32 {
     offer foo;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -142,9 +135,7 @@ spellcard main() i32 {
         ],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -155,16 +146,12 @@ fn parse_call_function_without_param() {
     let body = "
 foo();
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Expression(Expression::Call {
         function: "foo".to_owned(),
         args: vec![],
     })];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -175,16 +162,12 @@ fn parse_call_function_with_1_param() {
     let body = "
 foo(1);
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Expression(Expression::Call {
         function: "foo".to_owned(),
         args: vec![Expression::Literal(i32!(1))],
     })];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -195,16 +178,12 @@ fn parse_call_function_with_2_param() {
     let body = "
 foo(1, 2);
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Expression(Expression::Call {
         function: "foo".to_owned(),
         args: vec![Expression::Literal(i32!(1)), Expression::Literal(i32!(2))],
     })];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -215,8 +194,6 @@ fn parse_call_function_in_expression() {
     let body = "
 foo = foo(1, 2);
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Assignment {
         name: "foo".to_string(),
         value: Expression::Call {
@@ -225,9 +202,7 @@ foo = foo(1, 2);
         },
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -240,8 +215,6 @@ foreseen foo {
     say(1);
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Foreseen {
         condition: Expression::Variable("foo".to_string()),
         then_branch: vec![Statement::Expression(Expression::Call {
@@ -251,9 +224,7 @@ foreseen foo {
         else_branch: None,
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -268,8 +239,6 @@ spellcard main() i32 {
     }
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -284,9 +253,7 @@ spellcard main() i32 {
         }],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -301,8 +268,6 @@ foreseen foo {
     say(2);
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Foreseen {
         condition: Expression::Variable("foo".to_string()),
         then_branch: vec![Statement::Expression(Expression::Call {
@@ -315,9 +280,7 @@ foreseen foo {
         })]),
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -334,8 +297,6 @@ spellcard main() i32 {
     }
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -353,9 +314,7 @@ spellcard main() i32 {
         }],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -368,8 +327,6 @@ until foo {
     say(1);
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::Until {
         condition: Expression::Variable("foo".to_string()),
         body: vec![Statement::Expression(Expression::Call {
@@ -378,9 +335,7 @@ until foo {
         })],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -395,8 +350,6 @@ spellcard main() i32 {
     }
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![],
@@ -410,9 +363,7 @@ spellcard main() i32 {
         }],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -425,8 +376,6 @@ spellcard main(foo: i32) i32 {
     offer foo;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![FunctionArgs {
@@ -439,9 +388,7 @@ spellcard main(foo: i32) i32 {
         )))],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -454,8 +401,6 @@ spellcard main(foo: i32, bar: i32) i32 {
     offer foo;
 }
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![Statement::SpellCard {
         name: "main".to_owned(),
         args: vec![
@@ -474,9 +419,29 @@ spellcard main(foo: i32, bar: i32) i32 {
         )))],
     }];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
+    for (i, expect) in expected.iter().enumerate() {
+        assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+    }
+}
+
+#[test]
+fn parse_literal_string_assignment() {
+    let body = "
+vow testing = \"Hi\";
+        ";
+    let expected = vec![
+        Statement::Vow {
+            name: "testing".to_string(),
+            annotation: None,
+        },
+        Statement::Assignment {
+            name: "testing".to_string(),
+            value: Expression::Literal(string!("Hi".to_string())),
+        },
+    ];
+
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
@@ -487,8 +452,6 @@ fn parse_vow() {
     let body = "
 vow testing = 0;
         ";
-    let chars = body.chars().collect::<Vec<_>>();
-
     let expected = vec![
         Statement::Vow {
             name: "testing".to_string(),
@@ -500,9 +463,7 @@ vow testing = 0;
         },
     ];
 
-    let lexer = Lexer::new(&chars);
-    let mut parser = Parser::new(lexer);
-    let ops = parser.parse().expect("Should parse correctly");
+    let ops = setup(body);
     for (i, expect) in expected.iter().enumerate() {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }

@@ -121,9 +121,6 @@ impl Compiler {
                     else_branch,
                 } => {
                     let id = scope.alloc_label();
-                    let otherwise = format!(".L{}", id);
-
-                    let id = scope.alloc_label();
                     let end = format!(".L{}", id);
 
                     let (arg, mut op_condition) = self.parse_expression(scope, condition)?;
@@ -132,6 +129,9 @@ impl Compiler {
                     let mut then_body = self.compile_statement(scope, then_branch)?;
                     match else_branch {
                         Some(body) => {
+                            let id = scope.alloc_label();
+                            let otherwise = format!(".L{}", id);
+
                             let mut else_body = self.compile_statement(scope, body)?;
 
                             ops.push(Op::JmpIfNot {
@@ -187,7 +187,9 @@ impl Compiler {
                         },
                     );
                     ops.push(Op::Function(name));
-                    ops.push(Op::StackAlloc(scope.next_local));
+                    if scope.next_local > 0 {
+                        ops.push(Op::StackAlloc(scope.next_local));
+                    }
                     ops.append(&mut body);
                 }
                 Statement::Offer(expression) => match expression {
