@@ -40,7 +40,7 @@ impl Codegen for WindowsX86_64 {
     ) -> Result<String, super::CodegenError> {
         let mut code: Vec<String> = vec![];
         self.generate_prolog(&compiler, &mut code);
-        let mut offset = 32; // Shadow space
+        let mut offset = 0;
         for op in stmt {
             match op {
                 op::Op::StackAlloc(count) => {
@@ -72,7 +72,7 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!(""));
                 }
                 op::Op::Function(name) => {
-                    offset = 0;
+                    offset = 32; // Shadow space
                     code.push(format!("{}:", name));
                     code.push(format!("    ; Prolog"));
                     code.push(format!("    push rbp"));
