@@ -72,6 +72,7 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!(""));
                 }
                 op::Op::Function(name) => {
+                    offset = 0;
                     code.push(format!("{}:", name));
                     code.push(format!("    ; Prolog"));
                     code.push(format!("    push rbp"));
@@ -108,7 +109,9 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    ; Epilog"));
                     if let Some(arg) = arg {
                         match arg {
-                            Arg::Local(id) => code.push(format!("    mov rax, [rbp-{}]", id * 8)),
+                            Arg::Local(id) => {
+                                code.push(format!("    mov rax, [rbp-{}]", (id + 1) * 8))
+                            }
                             Arg::Literal(value) => {
                                 code.push(format!("    mov rax, {}", value.str()))
                             }
@@ -121,7 +124,6 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    add rsp, {}", offset));
                     code.push(format!("    pop rbp"));
                     code.push(format!("    ret"));
-                    offset = 0;
                 }
                 op::Op::UnaryNot { offset, arg } => {
                     code.push("    xor rbx, rbx".to_owned());
@@ -167,10 +169,66 @@ impl Codegen for WindowsX86_64 {
                             }
                             code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
                         }
-                        crate::ast::BinOp::Sub => todo!(),
-                        crate::ast::BinOp::Mul => todo!(),
-                        crate::ast::BinOp::Div => todo!(),
-                        crate::ast::BinOp::Equal => todo!(),
+                        crate::ast::BinOp::Sub => {
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    sub rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    sub rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    sub rax, [{}]", offset))
+                                }
+                            }
+                            code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
+                        }
+                        crate::ast::BinOp::Mul => {
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    imul rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    imul rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    imul rax, [{}]", offset))
+                                }
+                            }
+                            code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
+                        }
+                        crate::ast::BinOp::Div => {
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    mov rbx, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    mov rbx, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    mov rbx, [{}]", offset))
+                                }
+                            }
+                            code.push(format!("    xor rdx, rdx"));
+                            code.push(format!("    div rbx"));
+                            code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
+                        }
+                        crate::ast::BinOp::Equal => {
+                            code.push("    xor rbx, rbx".to_owned());
+                            match rhs {
+                                Arg::Local(offset) => {
+                                    code.push(format!("    cmp rax, [rbp-{}]", (offset + 1) * 8))
+                                }
+                                Arg::Literal(value) => {
+                                    code.push(format!("    cmp rax, {}", value.str()))
+                                }
+                                Arg::DataOffset(offset) => {
+                                    code.push(format!("    cmp rax, [{}]", offset))
+                                }
+                            }
+                            code.push("    setz bl".to_owned());
+                            code.push(format!("    mov [rbp-{}], rbx", (offset + 1) * 8));
+                        }
                         crate::ast::BinOp::Greater => {
                             code.push("    xor rbx, rbx".to_owned());
                             match rhs {
