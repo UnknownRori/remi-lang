@@ -30,8 +30,8 @@ For more information on dōjin culture,
 |Name            | Core | FFI |
 |----------------|------|-----|
 |Windows x86_64  |  🔧  |  🔧 |
-|Linux x86_64    |  🔧  |  ✖️  |
-|JavaScript      |  🔧  |  ✖️  |
+|Linux x86_64    |  ✖️   |  ✖️  |
+|JavaScript      |  ⚠️   |  ✖️  |
 |Byte Code       |  ✖️   |  ✖️  |
 
 - ✅ Well Supported
@@ -39,18 +39,26 @@ For more information on dōjin culture,
 - ⚠️  Major Bug/Issue
 - ✖️  Not supported yet
 
+Additional Note:
+
 - Core: Core feature of the language
 - FFI: Allow you to import external shared library
-
-## Quickstart
-
-TODO:
 
 ## Dependency
 
 - [Rust](https://rustup.rs/) - Compiler written in
 - [Fasm](https://flatassembler.net/) - Assembler that compile assembly code into .o file that the Remi-lang compiler generated
-- [gcc](https://gcc.gnu.org/) - Link the .o file into final executable
+- [gcc](https://gcc.gnu.org/) - Link the .o file into final executable (for windows I recommend using msys2/mingw one)
+
+## Quickstart
+
+```sh
+# Install the compiler from git repo without cloning manually
+cargo install --git https://github.com/UnknownRori/remi-lang/
+
+# Congratulation it installed on your path
+remi --help
+```
 
 ### Development
 
@@ -58,7 +66,11 @@ TODO:
 git clone https://github.com/UnknownRori/remi-lang
 cd remi-lang
 
+# Test the lexer and parser
 cargo test
+
+# Install it into global path
+cargo install --path .
 ```
 
 ## License
