@@ -83,6 +83,11 @@ impl Codegen for WindowsX86_64 {
                 }
                 op::Op::Call { name, args } => {
                     code.push(format!("    ; Calling"));
+                    if args.len() > 4 {
+                        return Err(crate::codegen::CodegenError::Unsupported {
+                            op: op::Op::Call { name, args },
+                        });
+                    }
                     const REGISTER: [&str; 4] = ["rcx", "rdx", "r8", "r9"];
                     for (reg, arg) in REGISTER.iter().zip(args.iter()) {
                         match arg {
@@ -105,17 +110,7 @@ impl Codegen for WindowsX86_64 {
                 op::Op::Ret(arg) => {
                     code.push(format!("    ; Epilog"));
                     if let Some(arg) = arg {
-                        match arg {
-                            Arg::Local(id) => {
-                                code.push(format!("    mov rax, [rbp-{}]", (id + 1) * 8))
-                            }
-                            Arg::Literal(value) => {
-                                code.push(format!("    mov rax, {}", value.str()))
-                            }
-                            Arg::DataOffset(offset) => {
-                                code.push(format!("    mov rax, [eternal+{}]", offset))
-                            }
-                        }
+                        code.push(arg_to_reg(arg, "rax"));
                     }
 
                     if offset > 0 {
@@ -144,15 +139,8 @@ impl Codegen for WindowsX86_64 {
                     rhs,
                 } => {
                     code.push(format!("    ; Bin Op {}", binop));
-                    match lhs {
-                        Arg::Local(offset) => {
-                            code.push(format!("    mov rax, [rbp-{}]", (offset + 1) * 8))
-                        }
-                        Arg::Literal(value) => code.push(format!("    mov rax, {}", value.str())),
-                        Arg::DataOffset(offset) => {
-                            code.push(format!("    mov rax, [eternal+{}]", offset))
-                        }
-                    }
+
+                    code.push(arg_to_reg(lhs, "rax"));
                     match binop {
                         crate::ast::BinOp::Add => {
                             match rhs {
@@ -197,17 +185,7 @@ impl Codegen for WindowsX86_64 {
                             code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
                         }
                         crate::ast::BinOp::Div => {
-                            match rhs {
-                                Arg::Local(offset) => {
-                                    code.push(format!("    mov rbx, [rbp-{}]", (offset + 1) * 8))
-                                }
-                                Arg::Literal(value) => {
-                                    code.push(format!("    mov rbx, {}", value.str()))
-                                }
-                                Arg::DataOffset(offset) => {
-                                    code.push(format!("    mov rbx, [{}]", offset))
-                                }
-                            }
+                            code.push(arg_to_reg(rhs, "rbx"));
                             code.push(format!("    xor rdx, rdx"));
                             code.push(format!("    div rbx"));
                             code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
@@ -267,15 +245,7 @@ impl Codegen for WindowsX86_64 {
                 op::Op::Jmp { name } => code.push(format!("    jmp {}", name)),
                 op::Op::JmpIfNot { name, arg } => {
                     code.push(format!("    ; Jump if not"));
-                    match arg {
-                        Arg::Local(offset) => {
-                            code.push(format!("    mov rax, [rbp-{}]", (offset + 1) * 8))
-                        }
-                        Arg::Literal(value) => code.push(format!("    mov rax, {}", value.str())),
-                        Arg::DataOffset(offset) => {
-                            code.push(format!("    mov rax, [eternal+{}]", offset))
-                        }
-                    }
+                    code.push(arg_to_reg(arg, "rax"));
                     code.push(format!("    test rax, rax"));
                     code.push(format!("    jz {}", name));
                     code.push(format!(""));
@@ -283,5 +253,13 @@ impl Codegen for WindowsX86_64 {
             }
         }
         Ok(code.join("\n"))
+    }
+}
+
+fn arg_to_reg(arg: Arg, reg: &str) -> String {
+    match arg {
+        Arg::Local(offset) => format!("    mov {}, [rbp-{}]", reg, (offset + 1) * 8),
+        Arg::Literal(value) => format!("    mov {}, {}", reg, value.str()),
+        Arg::DataOffset(offset) => format!("    mov {}, [eternal+{}]", reg, offset),
     }
 }

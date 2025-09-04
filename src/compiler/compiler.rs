@@ -29,6 +29,10 @@ impl Scope {
     }
 
     pub fn alloc_local(&mut self, name: &str) -> usize {
+        if let Some(idx) = self.get_local(name) {
+            return idx;
+        }
+
         let id = self.next_local;
         self.next_local += 1;
         self.locals.insert(name.to_owned(), id);
@@ -123,15 +127,15 @@ impl Compiler {
                     let id = scope.alloc_label();
                     let end = format!(".L{}", id);
 
+                    let id = scope.alloc_label();
+                    let otherwise = format!(".L{}", id);
+
                     let (arg, mut op_condition) = self.parse_expression(scope, condition)?;
                     ops.append(&mut op_condition);
 
                     let mut then_body = self.compile_statement(scope, then_branch)?;
                     match else_branch {
                         Some(body) => {
-                            let id = scope.alloc_label();
-                            let otherwise = format!(".L{}", id);
-
                             let mut else_body = self.compile_statement(scope, body)?;
 
                             ops.push(Op::JmpIfNot {
