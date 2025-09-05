@@ -1,5 +1,6 @@
 mod ir;
 mod javascript;
+mod linux_x86_64;
 mod utils;
 mod windows_x86_64;
 
@@ -7,6 +8,7 @@ use std::error::Error;
 
 pub use ir::*;
 pub use javascript::*;
+pub use linux_x86_64::*;
 pub use windows_x86_64::*;
 
 use crate::{compiler::Compiler, op::Op};
