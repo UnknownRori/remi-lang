@@ -28,6 +28,12 @@ pub enum Op {
         rhs: Arg,
     },
 
+    ParamAssign {
+        // This offset is for parameter
+        offset: usize,
+        // This arg is target
+        arg: Arg,
+    },
     Function(String),
     Label(String),
     Call {
@@ -73,6 +79,9 @@ impl std::fmt::Display for Op {
                 "    BinOp {} {} {} {}",
                 offset, binop, lhs, rhs
             )),
+            crate::op::Op::ParamAssign { offset, arg } => {
+                f.write_fmt(format_args!("ParamAssign({}, {})", offset, arg))
+            }
             crate::op::Op::Function(name) => f.write_fmt(format_args!("{}:", name)),
             crate::op::Op::Label(name) => f.write_fmt(format_args!("{}:", name)),
             crate::op::Op::UnaryNot { offset, arg } => {

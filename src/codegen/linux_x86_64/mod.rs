@@ -247,6 +247,7 @@ impl Codegen for LinuxX86_64 {
                     code.push(format!("    jz {}", name));
                     code.push(format!(""));
                 }
+                Op::ParamAssign { .. } => return Err(CodegenError::Unsupported { op }),
             }
         }
         Ok(code.join("\n"))

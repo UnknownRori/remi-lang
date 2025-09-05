@@ -160,3 +160,36 @@ spellcard main() i32 {
         assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
     }
 }
+
+#[test]
+pub fn compile_function_param() {
+    let body = "
+spellcard sum(a: i32, b: i32) i32 {
+    offer a + b;
+}";
+
+    let expected = vec![
+        Op::Function("sum".to_string()),
+        Op::StackAlloc(3),
+        Op::ParamAssign {
+            offset: 0,
+            arg: Arg::Local(0),
+        },
+        Op::ParamAssign {
+            offset: 1,
+            arg: Arg::Local(1),
+        },
+        Op::BinOp {
+            binop: crate::ast::BinOp::Add,
+            offset: 2,
+            lhs: Arg::Local(0),
+            rhs: Arg::Local(1),
+        },
+        Op::Ret(Some(Arg::Local(2))),
+    ];
+
+    let (ops, _) = setup(body);
+    for (i, expect) in expected.iter().enumerate() {
+        assert_eq!(expect, ops.get(i).expect("Should have the same op length"));
+    }
+}

@@ -32,9 +32,11 @@ impl Codegen for IRCodegen {
                     offset,
                     dump_args(&arg)
                 )),
-                crate::op::Op::UnaryNot { offset, arg } => {
-                    body.push(format!("        UnaryNot({}, {})", offset, dump_args(&arg)))
-                }
+                crate::op::Op::UnaryNot { offset, arg } => body.push(format!(
+                    "        UnaryNot({:#04x}, {})",
+                    offset,
+                    dump_args(&arg)
+                )),
                 crate::op::Op::BinOp {
                     binop,
                     offset,
@@ -47,6 +49,9 @@ impl Codegen for IRCodegen {
                     binop,
                     dump_args(&rhs)
                 )),
+                crate::op::Op::ParamAssign { offset, arg } => {
+                    body.push(format!("ParamAssign({:#04x}, {})", offset, dump_args(&arg)))
+                }
                 crate::op::Op::Function(name) => body.push(format!("    {}():", name)),
                 crate::op::Op::Label(name) => body.push(format!("    {}:", name)),
                 crate::op::Op::Call { name, args } => {

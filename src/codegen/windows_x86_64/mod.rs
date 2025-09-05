@@ -250,6 +250,7 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    jz {}", name));
                     code.push(format!(""));
                 }
+                op::Op::ParamAssign { .. } => return Err(super::CodegenError::Unsupported { op }),
             }
         }
         Ok(code.join("\n"))

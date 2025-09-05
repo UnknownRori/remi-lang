@@ -179,22 +179,38 @@ impl Compiler {
                     ops.push(Op::Jmp { name: start });
                     ops.push(Op::Label(end));
                 }
-                Statement::SpellCard { name, body, .. } => {
+                Statement::SpellCard {
+                    name,
+                    body,
+                    args,
+                    return_type,
+                    ..
+                } => {
                     let mut scope = Scope::new();
+                    let mut temp = vec![];
+                    for (i, arg) in args.iter().enumerate() {
+                        let id = scope.alloc_local(&arg.name);
+                        temp.push(Op::ParamAssign {
+                            offset: i,
+                            arg: Arg::Local(id),
+                        });
+                    }
                     let mut body = self.compile_statement(&mut scope, body)?;
-                    self.spellcard.insert(
-                        name.to_owned(),
-                        FunctionSymbol {
-                            args: vec![],
-                            return_type: "void".to_owned(),
-                            storage: FunctionStorage::Internal,
-                        },
-                    );
-                    ops.push(Op::Function(name));
+                    ops.push(Op::Function(name.clone()));
                     if scope.next_local > 0 {
                         ops.push(Op::StackAlloc(scope.next_local));
                     }
+                    ops.append(&mut temp);
                     ops.append(&mut body);
+
+                    self.spellcard.insert(
+                        name,
+                        FunctionSymbol {
+                            args: args.iter().map(|a| a.name.to_owned()).collect(),
+                            return_type: return_type.unwrap_or("void".to_owned()),
+                            storage: FunctionStorage::Internal,
+                        },
+                    );
                 }
                 Statement::Offer(expression) => match expression {
                     Some(expression) => {
