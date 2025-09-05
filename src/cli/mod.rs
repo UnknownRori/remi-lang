@@ -132,6 +132,7 @@ impl CLI {
         {
             let mut a = std::process::Command::new("gcc");
             a.args([obj_file_name, "-o".to_owned(), out, "-no-pie".to_owned()]);
+            #[cfg(target_os = "windows")]
             std::os::windows::process::CommandExt::raw_arg(
                 &mut a,
                 linker_flag.unwrap_or(String::new()),
