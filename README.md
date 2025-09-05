@@ -30,9 +30,9 @@ For more information on dōjin culture,
 |Name            | Core | FFI |
 |----------------|------|-----|
 |Windows x86_64  |  🔧  |  🔧 |
-|Linux x86_64    |  ✖️   |  ✖️  |
-|JavaScript      |  ⚠️   |  ✖️  |
-|Byte Code       |  ✖️   |  ✖️  |
+|Linux x86_64    |  🔧  |  🔧 |
+|JavaScript      |  ⚠️  |  ✖️ |
+|Byte Code       |  ✖️  |  ✖️ |
 
 - ✅ Well Supported
 - 🔧 Under construction
