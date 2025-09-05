@@ -74,7 +74,7 @@ spellcard main() i32 {
 
     let expected: Vec<Op> = vec![
         Op::Function("main".to_owned()),
-        Op::StackAlloc(3),
+        Op::StackAlloc(2),
         Op::EternalAssign {
             arg: Arg::Literal(i32!(69)),
             offset: 0,
@@ -92,12 +92,12 @@ spellcard main() i32 {
         },
         Op::BinOp {
             binop: crate::ast::BinOp::Sub,
-            offset: 2,
+            offset: 1,
             lhs: Arg::Local(0),
             rhs: Arg::Literal(i32!(1)),
         },
         Op::EternalAssign {
-            arg: Arg::Local(2),
+            arg: Arg::Local(1),
             offset: 0,
         },
         Op::Jmp {
@@ -126,7 +126,7 @@ spellcard main() i32 {
 
     let expected: Vec<Op> = vec![
         Op::Function("main".to_owned()),
-        Op::StackAlloc(3),
+        Op::StackAlloc(2),
         Op::EternalAssign {
             arg: Arg::Literal(i32!(69)),
             offset: 0,
@@ -143,12 +143,12 @@ spellcard main() i32 {
         },
         Op::BinOp {
             binop: crate::ast::BinOp::Sub,
-            offset: 2,
+            offset: 1,
             lhs: Arg::Local(0),
             rhs: Arg::Literal(i32!(1)),
         },
         Op::EternalAssign {
-            arg: Arg::Local(2),
+            arg: Arg::Local(1),
             offset: 0,
         },
         Op::Label(".L0".to_string()),
