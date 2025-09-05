@@ -14,7 +14,6 @@ use std::{
     error::Error,
     fs::File,
     io::{Read, Write},
-    os::windows::process::CommandExt,
 };
 
 mod args;
@@ -132,8 +131,8 @@ impl CLI {
 
         {
             let mut a = std::process::Command::new("gcc");
-            a.args([obj_file_name, "-o".to_owned(), out]);
-            a.raw_arg(linker_flag.unwrap_or(String::new()));
+            a.args([obj_file_name, "-o".to_owned(), out, "-no-pie".to_owned()]);
+            a.arg(linker_flag.unwrap_or(String::new()));
             a.stdout(std::io::stdout());
             println!(
                 "{} {}",
@@ -160,7 +159,7 @@ impl CLI {
         let stmt = compiler.compile(ast)?;
 
         let mut codegen = self.target.get_mut(&arch);
-        let codegen = codegen.take().unwrap();
+        let codegen = codegen.take().expect("Codegen not implemented");
         let out = codegen.compile(compiler, stmt)?;
         Ok(out)
     }
