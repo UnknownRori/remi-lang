@@ -7,6 +7,8 @@ use super::{Codegen, utils::align_mem};
 
 pub struct WindowsX86_64;
 
+const REGISTER: [&str; 4] = ["rcx", "rdx", "r8", "r9"];
+
 impl WindowsX86_64 {
     pub fn new() -> Self {
         Self
@@ -81,14 +83,14 @@ impl Codegen for WindowsX86_64 {
                 op::Op::Label(name) => {
                     code.push(format!("{}:", name));
                 }
-                op::Op::Call { name, args } => {
+                op::Op::Call { result, name, args } => {
                     code.push(format!("    ; Calling"));
                     if args.len() > 4 {
                         return Err(crate::codegen::CodegenError::Unsupported {
-                            op: op::Op::Call { name, args },
+                            op: op::Op::Call { result, name, args },
+                            message: format!("Function call currently support 4 parameter"),
                         });
                     }
-                    const REGISTER: [&str; 4] = ["rcx", "rdx", "r8", "r9"];
                     for (reg, arg) in REGISTER.iter().zip(args.iter()) {
                         match arg {
                             Arg::Local(id) => {
@@ -105,6 +107,7 @@ impl Codegen for WindowsX86_64 {
                         }
                     }
                     code.push(format!("    call {}", name));
+                    code.push(format!("    mov [rbp-{}], rax", (result + 1) * 8));
                     code.push(format!(""));
                 }
                 op::Op::Ret(arg) => {
@@ -250,7 +253,28 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    jz {}", name));
                     code.push(format!(""));
                 }
-                op::Op::ParamAssign { .. } => return Err(super::CodegenError::Unsupported { op }),
+                op::Op::ParamAssign { offset, ref arg } => {
+                    if offset > REGISTER.len() {
+                        return Err(super::CodegenError::Unsupported {
+                            op: op.clone(),
+                            message: format!("Function parameter is above {}", REGISTER.len()),
+                        });
+                    }
+
+                    let reg = REGISTER.get(offset).unwrap();
+                    match arg {
+                        Arg::Local(offset) => {
+                            code.push(format!("    mov [rbp-{}], {}", (offset + 1) * 8, reg))
+                        }
+                        _ => {
+                            return Err(super::CodegenError::InvalidOperation {
+                                message: format!(
+                                    "Function parameter can only assign on local variable"
+                                ),
+                            });
+                        }
+                    }
+                }
             }
         }
         Ok(code.join("\n"))

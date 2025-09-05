@@ -299,12 +299,13 @@ impl Compiler {
                     args_expr.push(arg);
                 }
 
+                let offset = scope.alloc_local("__temp");
                 ops.push(Op::Call {
+                    result: offset,
                     name: function,
                     args: args_expr,
                 });
 
-                let offset = scope.alloc_local("__temp");
                 Ok((Arg::Local(offset), ops))
             }
         }

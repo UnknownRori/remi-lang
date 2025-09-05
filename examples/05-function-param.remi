@@ -1,14 +1,16 @@
 invite printf;
 
-spellcard add(a: i32, b: i32) i32 {
+// TODO : Need some basic name mangling for private function
+// since it collided with FASM weirdly enough
+spellcard add_number(a: i32, b: i32) i32 {
     offer a + b;
 }
 
 spellcard main() i32 {
-    vow a = add(35, 35);
+    vow a = add_number(35, 35);
 
-    foreseen a == 69 {
-        printf("Yoo 69\n");
+    foreseen a > 69 {
+        printf("result of add is %d which is above 69", a);
     }
 
     offer 0;

@@ -43,20 +43,25 @@ impl Codegen for IRCodegen {
                     lhs,
                     rhs,
                 } => body.push(format!(
-                    "        BinOp {:#04x} {} {} {}",
+                    "        BinOp({:#04x} {} {} {})",
                     offset,
                     dump_args(&lhs),
                     binop,
                     dump_args(&rhs)
                 )),
-                crate::op::Op::ParamAssign { offset, arg } => {
-                    body.push(format!("ParamAssign({:#04x}, {})", offset, dump_args(&arg)))
-                }
+                crate::op::Op::ParamAssign { offset, arg } => body.push(format!(
+                    "        ParamAssign({:#04x}, {})",
+                    offset,
+                    dump_args(&arg)
+                )),
                 crate::op::Op::Function(name) => body.push(format!("    {}():", name)),
                 crate::op::Op::Label(name) => body.push(format!("    {}:", name)),
-                crate::op::Op::Call { name, args } => {
+                crate::op::Op::Call { result, name, args } => {
                     let args = args.iter().map(dump_args).collect::<Vec<_>>().join(", ");
-                    body.push(format!("        Call({}, [{}])", name, args))
+                    body.push(format!(
+                        "        Call({:#04x}, {}, [{}])",
+                        result, name, args
+                    ))
                 }
                 crate::op::Op::Ret(arg) => match arg {
                     Some(arg) => body.push(format!("        Ret({})", dump_args(&arg))),

@@ -19,7 +19,8 @@ pub trait Codegen {
 
 #[derive(Debug)]
 pub enum CodegenError {
-    Unsupported { op: Op },
+    Unsupported { op: Op, message: String },
+    InvalidOperation { message: String },
 }
 
 impl Error for CodegenError {}
@@ -27,7 +28,10 @@ impl Error for CodegenError {}
 impl std::fmt::Display for CodegenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CodegenError::Unsupported { op } => f.write_fmt(format_args!("{}", op)),
+            CodegenError::Unsupported { op, message } => {
+                f.write_fmt(format_args!("{} = {}", message, op))
+            }
+            CodegenError::InvalidOperation { message } => f.write_fmt(format_args!("{}", message)),
         }
     }
 }

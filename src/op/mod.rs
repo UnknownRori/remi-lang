@@ -37,6 +37,7 @@ pub enum Op {
     Function(String),
     Label(String),
     Call {
+        result: usize,
         name: String,
         args: Vec<Arg>,
     },
@@ -87,8 +88,8 @@ impl std::fmt::Display for Op {
             crate::op::Op::UnaryNot { offset, arg } => {
                 f.write_fmt(format_args!("UnaryNot({}, {:?})", offset, arg))
             }
-            crate::op::Op::Call { name, args } => {
-                f.write_fmt(format_args!("Call({}, {:?})", name, args))
+            crate::op::Op::Call { result, name, args } => {
+                f.write_fmt(format_args!("Call({}, {}, {:?})", result, name, args))
             }
             crate::op::Op::Ret(arg) => match arg {
                 Some(arg) => f.write_fmt(format_args!("Ret({})", arg)),

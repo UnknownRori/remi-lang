@@ -69,7 +69,7 @@ impl Codegen for JavascriptCodegen {
                     }
                 },
                 crate::op::Op::Label(_name) => {}
-                crate::op::Op::Call { name, args } => {
+                crate::op::Op::Call { name, args, .. } => {
                     let mapped = args.iter().map(|a| match a {
                         crate::op::Arg::Local(offset) => format!("_{}", offset),
                         crate::op::Arg::Literal(value) => format!("{}", value.str()),
@@ -85,7 +85,10 @@ impl Codegen for JavascriptCodegen {
                     code.push(format!("    {}({});", name, arg));
                 }
                 crate::op::Op::Ret(_arg) => {}
-                other => Err(CodegenError::Unsupported { op: other })?,
+                other => Err(CodegenError::Unsupported {
+                    op: other,
+                    message: format!("Not supported"),
+                })?,
             }
         }
         self.generate_epilog(&mut code);
