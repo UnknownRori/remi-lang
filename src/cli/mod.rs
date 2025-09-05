@@ -1,7 +1,7 @@
 use clap::Parser;
 
 use crate::{
-    codegen::{Codegen, IRCodegen, JavascriptCodegen, WindowsX86_64},
+    codegen::{Codegen, IRCodegen, JavascriptCodegen, LinuxX86_64, WindowsX86_64},
     compiler::Compiler,
     lexer::Lexer,
     parser::parser::Parser as RemiParser,
@@ -31,10 +31,12 @@ impl CLI {
         let ircodegen: Box<dyn Codegen> = Box::new(IRCodegen);
         let jscodegen: Box<dyn Codegen> = Box::new(JavascriptCodegen::new());
         let windows_x86_64: Box<dyn Codegen> = Box::new(WindowsX86_64::new());
+        let linux: Box<dyn Codegen> = Box::new(LinuxX86_64::new());
 
         target.insert(Target::IR, ircodegen);
         target.insert(Target::Javascript, jscodegen);
         target.insert(Target::WindowsX86_64, windows_x86_64);
+        target.insert(Target::LinuxX86_64, linux);
 
         Self {
             target,
@@ -84,7 +86,7 @@ impl CLI {
                             let arch = target.unwrap_or(crate::target::Target::WindowsX86_64);
 
                             #[cfg(target_os = "linux")]
-                            let arch = arch.unwrap_or(crate::target::Target::LinuxX86_64);
+                            let arch = target.unwrap_or(crate::target::Target::LinuxX86_64);
 
                             {
                                 let mut fd_out = File::create(&asm_file_name)?;
