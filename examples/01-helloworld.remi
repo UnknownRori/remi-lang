@@ -1,4 +1,4 @@
-invite printf
+invite printf;
 
 spellcard main() i32 {
     printf("Hello from Remi Lang!\n");
