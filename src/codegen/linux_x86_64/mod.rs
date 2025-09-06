@@ -28,7 +28,13 @@ impl LinuxX86_64 {
             body.push(format!("    eternal: db {}", bytes.join(", ")));
         }
         body.push("section '.text' executable".to_string());
-        body.push("public main".to_string());
+        // TODO : Make function visibility
+        for i in compiler.spellcard.iter() {
+            match i.1.storage {
+                crate::compiler::FunctionStorage::Internal => body.push(format!("public {}", &i.0)),
+                _ => {}
+            }
+        }
     }
 
     pub fn generate_epilog(&mut self, _body: &mut Vec<String>) {}
