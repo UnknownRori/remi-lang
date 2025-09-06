@@ -7,7 +7,6 @@ pub enum Target {
     Javascript,
     IR,
     Bytecode,
-    ObjectFile,
 }
 
 impl std::fmt::Display for Target {
@@ -18,7 +17,6 @@ impl std::fmt::Display for Target {
             Target::Javascript => f.write_str("javascript"),
             Target::IR => f.write_str("ir"),
             Target::Bytecode => f.write_str("bytecode"),
-            Target::ObjectFile => f.write_str("objectfile"),
         }
     }
 }
@@ -33,7 +31,6 @@ impl FromStr for Target {
             "ir" => Ok(Self::IR),
             "javascript" => Ok(Self::Javascript),
             "bytecode" => Ok(Self::Bytecode),
-            "objectfile" => Ok(Self::ObjectFile),
             _ => Err(()),
         }
     }

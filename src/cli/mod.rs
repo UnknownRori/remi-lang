@@ -54,6 +54,8 @@ impl CLI {
                 src,
                 verbose,
                 linker_flag,
+                compile_only,
+                compile_and_assemble_only,
                 dump,
             } => {
                 let src_file = src
@@ -85,15 +87,21 @@ impl CLI {
                 match target {
                     Some(arch) => match arch {
                         Target::WindowsX86_64 | Target::LinuxX86_64 => {
-                            self.build_exe(
-                                &out,
-                                arch,
-                                ast,
-                                &args,
-                                &mut asm_temp,
-                                &mut obj_temp,
-                                verbose,
-                            )?;
+                            if compile_only {
+                                self.compile_only(&out, arch, ast)?;
+                            } else if compile_and_assemble_only {
+                                self.assemble_only(&out, arch, ast, &mut asm_temp, verbose)?;
+                            } else {
+                                self.build_exe(
+                                    &out,
+                                    arch,
+                                    ast,
+                                    &args,
+                                    &mut asm_temp,
+                                    &mut obj_temp,
+                                    verbose,
+                                )?;
+                            }
                         }
                         Target::Javascript => todo!(),
                         Target::IR => {
@@ -114,28 +122,6 @@ impl CLI {
                             }
                         }
                         Target::Bytecode => todo!(),
-                        Target::ObjectFile => {
-                            for ((op, compiler), original_path) in ast {
-                                let asm_file = format!("{}.asm", original_path.to_string_lossy());
-                                let obj_file = format!("{}.o", original_path.to_string_lossy());
-                                let codegen = self
-                                    .target
-                                    .get_mut(&arch)
-                                    .take()
-                                    .expect("Target is not yet implemented");
-
-                                let asm = codegen.compile(compiler, op)?;
-                                {
-                                    let mut file = File::create(&asm_file)?;
-                                    file.write_all(asm.as_bytes())?;
-                                }
-                                build_obj(&asm_file, &obj_file, verbose)
-                                    .map_err(|err| Box::new(err))?;
-
-                                asm_temp.push(asm_file);
-                                obj_temp.push(obj_file);
-                            }
-                        }
                     },
                     None => {
                         #[cfg(target_os = "windows")]
@@ -144,15 +130,21 @@ impl CLI {
                         #[cfg(target_os = "linux")]
                         let arch = target.unwrap_or(crate::target::Target::LinuxX86_64);
 
-                        self.build_exe(
-                            &out,
-                            arch,
-                            ast,
-                            &args,
-                            &mut asm_temp,
-                            &mut obj_temp,
-                            verbose,
-                        )?;
+                        if compile_only {
+                            self.compile_only(&out, arch, ast)?;
+                        } else if compile_and_assemble_only {
+                            self.assemble_only(&out, arch, ast, &mut asm_temp, verbose)?;
+                        } else {
+                            self.build_exe(
+                                &out,
+                                arch,
+                                ast,
+                                &args,
+                                &mut asm_temp,
+                                &mut obj_temp,
+                                verbose,
+                            )?;
+                        }
                     }
                 }
 
@@ -160,6 +152,53 @@ impl CLI {
                 Ok(())
             }
         }
+    }
+
+    fn compile_only(
+        &mut self,
+        out: &str,
+        arch: Target,
+        mut ast: Vec<((Vec<Op>, Compiler), &PathBuf)>,
+    ) -> Result<(), Box<dyn Error>> {
+        let ((op, compiler), _) = ast.pop().expect("No inputs");
+        let codegen = self
+            .target
+            .get_mut(&arch)
+            .take()
+            .expect("Target is not yet implemented");
+
+        let asm = codegen.compile(compiler, op)?;
+        {
+            let mut file = File::create(out)?;
+            file.write_all(asm.as_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn assemble_only(
+        &mut self,
+        out: &str,
+        arch: Target,
+        mut ast: Vec<((Vec<Op>, Compiler), &PathBuf)>,
+        asm_temp: &mut Vec<String>,
+        verbose: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        let ((op, compiler), original_path) = ast.pop().expect("No inputs");
+        let asm_file = format!("{}.asm", original_path.to_string_lossy());
+        let codegen = self
+            .target
+            .get_mut(&arch)
+            .take()
+            .expect("Target is not yet implemented");
+
+        let asm = codegen.compile(compiler, op)?;
+        {
+            let mut file = File::create(&asm_file)?;
+            file.write_all(asm.as_bytes())?;
+        }
+        build_obj(&asm_file, out, verbose).map_err(|err| Box::new(err))?;
+        asm_temp.push(asm_file);
+        Ok(())
     }
 
     fn build_exe(
@@ -202,14 +241,16 @@ impl CLI {
         Ok(())
     }
 
+    fn clear_files(&self, temp: Vec<String>) {
+        for i in temp {
+            let _ = std::fs::remove_file(i);
+        }
+    }
+
     fn clear_temp(&self, obj_temp: Vec<String>, asm_temp: Vec<String>, dump: bool) {
         if !dump {
-            for i in obj_temp {
-                let _ = std::fs::remove_file(i);
-            }
-            for i in asm_temp {
-                let _ = std::fs::remove_file(i);
-            }
+            self.clear_files(obj_temp);
+            self.clear_files(asm_temp);
         }
     }
 }

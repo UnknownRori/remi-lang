@@ -47,6 +47,12 @@ pub enum Command {
         #[arg(short, long)]
         target: Option<Target>,
 
+        #[arg(short = 'S', long, help = "Compile to assembly only")]
+        compile_only: bool,
+
+        #[arg(short = 'c', long, help = "Compile to object file only")]
+        compile_and_assemble_only: bool,
+
         #[arg(short, long, help = "increase verbosity of output")]
         verbose: bool,
 
