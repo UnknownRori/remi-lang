@@ -1,10 +1,10 @@
+use build::{build_ast, build_exe, build_obj};
 use clap::Parser;
 
 use crate::{
     codegen::{Codegen, IRCodegen, JavascriptCodegen, LinuxX86_64, WindowsX86_64},
     compiler::Compiler,
-    lexer::Lexer,
-    parser::parser::Parser as RemiParser,
+    op::Op,
     target::Target,
 };
 
@@ -14,9 +14,11 @@ use std::{
     error::Error,
     fs::File,
     io::{Read, Write},
+    path::PathBuf,
 };
 
 mod args;
+mod build;
 
 pub struct CLI {
     args: Args,
@@ -47,127 +49,167 @@ impl CLI {
         match self.args.command.clone() {
             args::Command::Run { .. } => todo!(),
             args::Command::Compile {
-                src,
-                out,
                 target,
+                out,
+                src,
+                verbose,
                 linker_flag,
-                ..
+                dump,
             } => {
-                let mut body = String::new();
-                let mut fd = File::open(src)?;
-                fd.read_to_string(&mut body)?;
+                let src_file = src
+                    .iter()
+                    .map(|path| -> Result<(String, PathBuf), Box<dyn Error>> {
+                        let mut buf = String::new();
+                        let mut file = File::open(path).map_err(|err| Box::new(err))?;
+                        file.read_to_string(&mut buf).map_err(|err| Box::new(err))?;
+                        Ok((buf, path.clone()))
+                    })
+                    .map(|a| a.expect("Fail to read a file"))
+                    .collect::<Vec<_>>();
 
-                let asm_file_name = format!("{}.asm", out);
-                let obj_file_name = format!("{}.o", out);
+                let ast = src_file
+                    .iter()
+                    .map(|(code, path)| (build_ast(code.clone()).unwrap(), path))
+                    .collect::<Vec<_>>();
 
-                {
-                    match target {
-                        Some(target) => match target {
-                            Target::LinuxX86_64 | Target::WindowsX86_64 => {
-                                {
-                                    let mut fd_out = File::create(&asm_file_name)?;
-                                    let op = self.compile(target, body)?;
-                                    fd_out.write_all(op.as_bytes())?;
-                                    fd_out.flush()?;
-                                }
-                                self.build(asm_file_name, obj_file_name, out, linker_flag)?;
-                            }
-                            Target::IR | Target::Javascript => {
-                                let mut fd_out = File::create(out)?;
-                                let op = self.compile(target, body)?;
-                                fd_out.write_all(op.as_bytes())?;
-                                fd_out.flush()?;
-                            }
-                            _ => panic!("target is not implemented"),
-                        },
-                        None => {
-                            #[cfg(target_os = "windows")]
-                            let arch = target.unwrap_or(crate::target::Target::WindowsX86_64);
-
-                            #[cfg(target_os = "linux")]
-                            let arch = target.unwrap_or(crate::target::Target::LinuxX86_64);
-
-                            {
-                                let mut fd_out = File::create(&asm_file_name)?;
-                                let op = self.compile(arch, body)?;
-                                fd_out.write_all(op.as_bytes())?;
-                                fd_out.flush()?;
-                            }
-
-                            self.build(asm_file_name, obj_file_name, out, linker_flag)?;
+                let out = out.unwrap_or(String::from("a.out"));
+                let mut obj_temp = vec![];
+                let mut asm_temp = vec![];
+                let mut args = vec![String::from("-no-pie")];
+                if let Some(linker_flag) = linker_flag {
+                    let split = linker_flag.split(" ");
+                    for i in split {
+                        args.push(String::from(i));
+                    }
+                }
+                match target {
+                    Some(arch) => match arch {
+                        Target::WindowsX86_64 | Target::LinuxX86_64 => {
+                            self.build_exe(
+                                &out,
+                                arch,
+                                ast,
+                                &args,
+                                &mut asm_temp,
+                                &mut obj_temp,
+                                verbose,
+                            )?;
                         }
-                    };
+                        Target::Javascript => todo!(),
+                        Target::IR => {
+                            for ((op, compiler), original_path) in ast {
+                                let asm_file =
+                                    format!("{}.ir.asm", original_path.to_string_lossy());
+                                let codegen = self
+                                    .target
+                                    .get_mut(&arch)
+                                    .take()
+                                    .expect("Target is not yet implemented");
+
+                                let asm = codegen.compile(compiler, op)?;
+                                {
+                                    let mut file = File::create(&asm_file)?;
+                                    file.write_all(asm.as_bytes())?;
+                                }
+                            }
+                        }
+                        Target::Bytecode => todo!(),
+                        Target::ObjectFile => {
+                            for ((op, compiler), original_path) in ast {
+                                let asm_file = format!("{}.asm", original_path.to_string_lossy());
+                                let obj_file = format!("{}.o", original_path.to_string_lossy());
+                                let codegen = self
+                                    .target
+                                    .get_mut(&arch)
+                                    .take()
+                                    .expect("Target is not yet implemented");
+
+                                let asm = codegen.compile(compiler, op)?;
+                                {
+                                    let mut file = File::create(&asm_file)?;
+                                    file.write_all(asm.as_bytes())?;
+                                }
+                                build_obj(&asm_file, &obj_file, verbose)
+                                    .map_err(|err| Box::new(err))?;
+
+                                asm_temp.push(asm_file);
+                                obj_temp.push(obj_file);
+                            }
+                        }
+                    },
+                    None => {
+                        #[cfg(target_os = "windows")]
+                        let arch = target.unwrap_or(crate::target::Target::WindowsX86_64);
+
+                        #[cfg(target_os = "linux")]
+                        let arch = target.unwrap_or(crate::target::Target::LinuxX86_64);
+
+                        self.build_exe(
+                            &out,
+                            arch,
+                            ast,
+                            &args,
+                            &mut asm_temp,
+                            &mut obj_temp,
+                            verbose,
+                        )?;
+                    }
                 }
 
+                self.clear_temp(obj_temp, asm_temp, dump);
                 Ok(())
             }
         }
     }
 
-    fn build(
+    fn build_exe(
         &mut self,
-        asm_file_name: String,
-        obj_file_name: String,
-        out: String,
-        linker_flag: Option<String>,
+        out: &str,
+        arch: Target,
+        ast: Vec<((Vec<Op>, Compiler), &PathBuf)>,
+        args: &Vec<String>,
+        asm_temp: &mut Vec<String>,
+        obj_temp: &mut Vec<String>,
+        verbose: bool,
     ) -> Result<(), Box<dyn Error>> {
-        {
-            let mut a = std::process::Command::new("fasm");
-            a.args([asm_file_name, obj_file_name.clone()]);
-            a.stdout(std::io::stdout());
-            println!(
-                "{} {}",
-                a.get_program().to_string_lossy(),
-                a.get_args()
-                    .map(|a| a.to_string_lossy())
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            );
-            let b = a.output()?;
-            unsafe {
-                eprintln!("{}", String::from_utf8_unchecked(b.stderr));
-            };
+        for ((op, compiler), original_path) in ast {
+            let asm_file = format!("{}.asm", original_path.to_string_lossy());
+            let obj_file = format!("{}.o", original_path.to_string_lossy());
+            let codegen = self
+                .target
+                .get_mut(&arch)
+                .take()
+                .expect("Target is not yet implemented");
+
+            let asm = codegen.compile(compiler, op)?;
+            {
+                let mut file = File::create(&asm_file)?;
+                file.write_all(asm.as_bytes())?;
+            }
+            build_obj(&asm_file, &obj_file, verbose).map_err(|err| Box::new(err))?;
+
+            asm_temp.push(asm_file);
+            obj_temp.push(obj_file);
         }
 
-        {
-            let mut a = std::process::Command::new("gcc");
-            a.args([obj_file_name, "-o".to_owned(), out, "-no-pie".to_owned()]);
-            #[cfg(target_os = "windows")]
-            std::os::windows::process::CommandExt::raw_arg(
-                &mut a,
-                linker_flag.unwrap_or(String::new()),
-            );
-
-            #[cfg(target_os = "linux")]
-            a.arg(linker_flag.unwrap_or(String::new()));
-            a.stdout(std::io::stdout());
-            println!(
-                "{} {}",
-                a.get_program().to_string_lossy(),
-                a.get_args()
-                    .map(|a| a.to_string_lossy())
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            );
-            let b = a.output()?;
-            unsafe {
-                eprintln!("{}", String::from_utf8_unchecked(b.stderr));
-            };
-        }
+        build_exe(
+            "gcc",
+            obj_temp.as_slice(),
+            out.as_ref(),
+            args.as_slice(),
+            verbose,
+        )?;
         Ok(())
     }
 
-    fn compile(&mut self, arch: Target, src_code: String) -> Result<String, Box<dyn Error>> {
-        let chars = src_code.as_str().chars().collect::<Vec<_>>();
-        let lexer = Lexer::new(&chars);
-        let mut parser = RemiParser::new(lexer);
-        let ast = parser.parse()?;
-        let mut compiler = Compiler::new();
-        let stmt = compiler.compile(ast)?;
-
-        let mut codegen = self.target.get_mut(&arch);
-        let codegen = codegen.take().expect("Codegen not implemented");
-        let out = codegen.compile(compiler, stmt)?;
-        Ok(out)
+    fn clear_temp(&self, obj_temp: Vec<String>, asm_temp: Vec<String>, dump: bool) {
+        if !dump {
+            for i in obj_temp {
+                let _ = std::fs::remove_file(i);
+            }
+            for i in asm_temp {
+                let _ = std::fs::remove_file(i);
+            }
+        }
     }
 }

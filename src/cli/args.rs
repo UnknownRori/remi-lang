@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 use crate::target::Target;
@@ -30,14 +32,14 @@ pub enum Command {
     #[command(
         name = "cc",
         about = "Compile file in specified architecture",
-        long_about = "Compile specified file using fasm backend for executable or compile into byte code"
+        long_about = "Compile specified file using fasm backend and use C compiler to compile obj file for executable or compile into byte code"
     )]
     Compile {
-        #[arg(short, long)]
-        src: String,
+        #[arg(required = true)]
+        src: Vec<PathBuf>,
 
         #[arg(short, long)]
-        out: String,
+        out: Option<String>,
 
         #[arg(short, long)]
         linker_flag: Option<String>,
@@ -47,5 +49,12 @@ pub enum Command {
 
         #[arg(short, long, help = "increase verbosity of output")]
         verbose: bool,
+
+        #[arg(
+            short,
+            long,
+            help = "Do not remove the temporary file like .asm or .o file (can be use as debugging)"
+        )]
+        dump: bool,
     },
 }
