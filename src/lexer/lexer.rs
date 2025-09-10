@@ -75,9 +75,6 @@ impl<'a> Lexer<'a> {
         }
 
         return match self.content[0] {
-            '+' => Some(self.skip_n_return(1, TokenKind::Plus)),
-            '-' => Some(self.skip_n_return(1, TokenKind::Minus)),
-            '*' => Some(self.skip_n_return(1, TokenKind::Star)),
             '.' => Some(self.skip_n_return(1, TokenKind::Dot)),
             ',' => Some(self.skip_n_return(1, TokenKind::Comma)),
             ';' => Some(self.skip_n_return(1, TokenKind::SemiColon)),
@@ -88,6 +85,22 @@ impl<'a> Lexer<'a> {
             ')' => Some(self.skip_n_return(1, TokenKind::CParen)),
             '[' => Some(self.skip_n_return(1, TokenKind::OBracket)),
             ']' => Some(self.skip_n_return(1, TokenKind::CBracket)),
+            '+' => Some(self.skip_n_return(1, TokenKind::Plus)),
+            '*' => Some(self.skip_n_return(1, TokenKind::Star)),
+            '-' => {
+                if self.content[1].is_numeric() {
+                    self.content = &self.content[1..];
+                    let (mut chop, loc) = self.chop_while(|a| a.is_digit(10));
+
+                    chop.insert(0, '-');
+                    return Some(Token {
+                        kind: TokenKind::IntLiteral(chop.parse().unwrap()),
+                        loc,
+                    });
+                } else {
+                    return Some(self.skip_n_return(1, TokenKind::Minus));
+                }
+            }
             '/' => {
                 if self.content[1] != '/' {
                     return Some(self.skip_n_return(1, TokenKind::Slash));
@@ -366,6 +379,23 @@ main
         let chars = body.chars().collect::<Vec<_>>();
 
         let expected = [(Loc::new(1, 1), TokenKind::IntLiteral(69))];
+
+        let mut lexer = Lexer::new(&chars);
+
+        for (loc, kind) in expected {
+            let token = lexer.next().expect("it should have token");
+            assert_eq!(token.kind, kind);
+            assert_eq!(token.loc.column, loc.column);
+            assert_eq!(token.loc.row, loc.row);
+        }
+    }
+
+    #[test]
+    fn parse_negative_number() {
+        let body = "-69";
+        let chars = body.chars().collect::<Vec<_>>();
+
+        let expected = [(Loc::new(1, 1), TokenKind::IntLiteral(-69))];
 
         let mut lexer = Lexer::new(&chars);
 
