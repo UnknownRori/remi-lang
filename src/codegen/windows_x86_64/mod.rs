@@ -91,11 +91,30 @@ impl Codegen for WindowsX86_64 {
                 }
                 op::Op::Call { result, name, args } => {
                     code.push(format!("    ; Calling"));
+                    let mut stack_size = 0;
                     if args.len() > 4 {
-                        return Err(crate::codegen::CodegenError::Unsupported {
-                            op: op::Op::Call { result, name, args },
-                            message: format!("Function call currently support 4 parameter"),
-                        });
+                        let stack_count = args.len() - 4;
+                        stack_size = align_mem(stack_count * 8 + 32);
+                        code.push(format!("    sub rsp, {}", stack_size));
+                        for (i, arg) in args.iter().skip(4).enumerate() {
+                            match arg {
+                                Arg::Local(offset) => code.push(format!(
+                                    "    mov qword [rsp+32+{}], [rbp-{}]",
+                                    i * 8,
+                                    (offset + 1) * 8
+                                )),
+                                Arg::Literal(value) => code.push(format!(
+                                    "    mov qword [rsp+32+{}], {}",
+                                    i * 8,
+                                    value.str()
+                                )),
+                                Arg::DataOffset(offset) => code.push(format!(
+                                    "    mov qword [rsp+32+{}], eternal+{}",
+                                    i * 8,
+                                    offset
+                                )),
+                            }
+                        }
                     }
                     for (reg, arg) in REGISTER.iter().zip(args.iter()) {
                         match arg {
@@ -114,6 +133,9 @@ impl Codegen for WindowsX86_64 {
                     }
                     code.push(format!("    call {}", name));
                     code.push(format!("    mov [rbp-{}], rax", (result + 1) * 8));
+                    if args.len() > 4 {
+                        code.push(format!("    add rsp, {}", stack_size));
+                    }
                     code.push(format!(""));
                 }
                 op::Op::Ret(arg) => {
@@ -122,7 +144,7 @@ impl Codegen for WindowsX86_64 {
                         code.push(arg_to_reg(arg, "rax"));
                     }
 
-                    if offset > 0 {
+                    if offset > 32 {
                         code.push(format!("    add rsp, {}", offset));
                     }
                     code.push(format!("    pop rbp"));
@@ -260,24 +282,35 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!(""));
                 }
                 op::Op::ParamAssign { offset, ref arg } => {
-                    if offset > REGISTER.len() {
-                        return Err(super::CodegenError::Unsupported {
-                            op: op.clone(),
-                            message: format!("Function parameter is above {}", REGISTER.len()),
-                        });
-                    }
-
-                    let reg = REGISTER.get(offset).unwrap();
-                    match arg {
-                        Arg::Local(offset) => {
-                            code.push(format!("    mov [rbp-{}], {}", (offset + 1) * 8, reg))
+                    if let Some(reg) = REGISTER.get(offset) {
+                        match arg {
+                            Arg::Local(offset) => {
+                                code.push(format!("    mov [rbp-{}], {}", (offset + 1) * 8, reg))
+                            }
+                            _ => {
+                                return Err(super::CodegenError::InvalidOperation {
+                                    message: format!(
+                                        "Function parameter can only assign on local variable"
+                                    ),
+                                });
+                            }
                         }
-                        _ => {
-                            return Err(super::CodegenError::InvalidOperation {
-                                message: format!(
-                                    "Function parameter can only assign on local variable"
-                                ),
-                            });
+                    } else {
+                        match arg {
+                            Arg::Local(local) => {
+                                code.push(format!(
+                                    "    mov rax, [rbp+48+{}]",
+                                    (offset - REGISTER.len()) * 8
+                                ));
+                                code.push(format!("    mov qword [rbp-{}], rax", (local + 1) * 8,));
+                            }
+                            _ => {
+                                return Err(super::CodegenError::InvalidOperation {
+                                    message: format!(
+                                        "Function parameter can only assign on local variable"
+                                    ),
+                                });
+                            }
                         }
                     }
                 }

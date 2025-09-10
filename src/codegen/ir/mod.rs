@@ -60,7 +60,7 @@ impl Codegen for IRCodegen {
                     let args = args.iter().map(dump_args).collect::<Vec<_>>().join(", ");
                     body.push(format!(
                         "        Call({:#04x}, {}, [{}])",
-                        result, name, args
+                        result, name, args,
                     ))
                 }
                 crate::op::Op::Ret(arg) => match arg {
@@ -80,7 +80,7 @@ impl Codegen for IRCodegen {
 fn dump_args(arg: &Arg) -> String {
     match arg {
         Arg::Local(offset) => format!("Local({:#04x})", offset),
-        Arg::Literal(value) => value.str(),
+        Arg::Literal(value) => format!("Literal({})", value.str()),
         Arg::DataOffset(offset) => format!("DataOffset({:#04x})", offset),
     }
 }
