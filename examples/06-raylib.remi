@@ -1,25 +1,55 @@
-// cargo run -- cc -s ./examples/06-raylib.remi -o ./raylib-example -l="-L./raylib/ -lmsvcrt -luser32 -lkernel32 -lraylib -lopengl32 -lgdi32 -lwinmm" 
-invite printf;
-
+// cargo run -- cc ./examples/06-raylib.remi -o ./raylib-example -l="-L./raylib/ -lmsvcrt -luser32 -lkernel32 -lraylib -lopengl32 -lgdi32 -lwinmm" 
 invite InitWindow;
 invite WindowShouldClose;
+invite SetTargetFPS;
+invite DrawFPS;
 invite BeginDrawing;
 invite EndDrawing;
 
 invite ClearBackground;
+invite DrawRectangle;
 
 spellcard main() i32 {
     eternal title = "Hello Raylib!";
-    eternal width = 800;
-    eternal height = 600;
+    eternal width = 900;
+    eternal height = 506;
 
-    printf("Hello, World!\n");
+    eternal widthBox = 100;
+    eternal heightBox = 100;
+    vow posX = 50;
+    vow posY = 50;
+    vow velX = 1;
+    vow velY = 1;
 
     InitWindow(width, height, title);
+    SetTargetFPS(120);
 
     until !WindowShouldClose()  {
         BeginDrawing();
-        ClearBackground(4278190335);
+        ClearBackground(168430122);
+        DrawFPS(0, 0);
+
+        foreseen (posX + widthBox) > width {
+            velX = -1;
+        }
+
+        foreseen posX < 0 {
+            velX = 1;
+        }
+
+        foreseen (posY + heightBox) > height {
+            velY = -1;
+        }
+
+        foreseen posY < 0 {
+            velY = 1;
+        }
+
+        posX = posX + velX;
+        posY = posY + velY;
+
+        DrawRectangle(posX, posY, widthBox, heightBox, 4278190335);
+    
         EndDrawing();
     }
 
