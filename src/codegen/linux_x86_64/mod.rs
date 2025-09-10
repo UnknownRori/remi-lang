@@ -88,24 +88,24 @@ impl Codegen for LinuxX86_64 {
                 Op::Call { result, name, args } => {
                     code.push(format!("    ; Calling"));
                     let mut stack_size = 0;
-                    if args.len() > 5 {
-                        let stack_count = args.len() - 4;
+                    if args.len() > REGISTER.len() {
+                        let stack_count = args.len() - REGISTER.len();
                         stack_size = align_mem(stack_count * 8);
                         code.push(format!("    sub rsp, {}", stack_size));
-                        for (i, arg) in args.iter().skip(5).enumerate() {
+                        for (i, arg) in args.iter().skip(REGISTER.len()).enumerate() {
                             match arg {
                                 Arg::Local(offset) => code.push(format!(
-                                    "    mov qword [rsp+32+{}], [rbp-{}]",
+                                    "    mov qword [rsp+{}], [rbp-{}]",
                                     i * 8,
                                     (offset + 1) * 8
                                 )),
                                 Arg::Literal(value) => code.push(format!(
-                                    "    mov qword [rsp+32+{}], {}",
+                                    "    mov qword [rsp+{}], {}",
                                     i * 8,
                                     value.str()
                                 )),
                                 Arg::DataOffset(offset) => code.push(format!(
-                                    "    mov qword [rsp+32+{}], eternal+{}",
+                                    "    mov qword [rsp+{}], eternal+{}",
                                     i * 8,
                                     offset
                                 )),
@@ -295,7 +295,7 @@ impl Codegen for LinuxX86_64 {
                         match arg {
                             Arg::Local(local) => {
                                 code.push(format!(
-                                    "    mov rax, [rbp+48+{}]",
+                                    "    mov rax, [rbp+16+{}]",
                                     (offset - REGISTER.len()) * 8
                                 ));
                                 code.push(format!("    mov qword [rbp-{}], rax", (local + 1) * 8,));
