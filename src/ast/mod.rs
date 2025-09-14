@@ -3,6 +3,7 @@ use crate::{lexer::TokenKind, value::Value};
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnaryOp {
     Not,
+    Negate,
 }
 
 #[derive(Debug, PartialEq, Clone)]

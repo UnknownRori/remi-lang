@@ -150,6 +150,11 @@ impl Codegen for WindowsX86_64 {
                     code.push(format!("    pop rbp"));
                     code.push(format!("    ret"));
                 }
+                op::Op::UnaryNegate { offset, arg } => {
+                    code.push(arg_to_reg(arg, "rax"));
+                    code.push(format!("    neg rax"));
+                    code.push(format!("    mov [rbp-{}], rax", (offset + 1) * 8));
+                }
                 op::Op::UnaryNot { offset, arg } => {
                     code.push("    xor rbx, rbx".to_owned());
                     match arg {

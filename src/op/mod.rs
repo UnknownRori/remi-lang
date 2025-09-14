@@ -17,6 +17,10 @@ pub enum Op {
         offset: usize,
         arg: Arg,
     },
+    UnaryNegate {
+        offset: usize,
+        arg: Arg,
+    },
     UnaryNot {
         offset: usize,
         arg: Arg,
@@ -87,6 +91,9 @@ impl std::fmt::Display for Op {
             crate::op::Op::Label(name) => f.write_fmt(format_args!("{}:", name)),
             crate::op::Op::UnaryNot { offset, arg } => {
                 f.write_fmt(format_args!("UnaryNot({}, {:?})", offset, arg))
+            }
+            crate::op::Op::UnaryNegate { offset, arg } => {
+                f.write_fmt(format_args!("UnaryNegate({}, {:?})", offset, arg))
             }
             crate::op::Op::Call { result, name, args } => {
                 f.write_fmt(format_args!("Call({}, {}, {:?})", result, name, args))

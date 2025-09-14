@@ -348,6 +348,14 @@ impl<'a> Parser<'a> {
         }])
     }
 
+    fn parse_negate(&mut self, loc: Loc) -> Result<Expression, ParseError> {
+        let right = self.parse_primary(loc)?;
+        Ok(Expression::Unary {
+            op: UnaryOp::Negate,
+            arg: Box::new(right),
+        })
+    }
+
     fn parse_bang(&mut self, loc: Loc) -> Result<Expression, ParseError> {
         let right = self.parse_primary(loc)?;
         Ok(Expression::Unary {
@@ -391,6 +399,7 @@ impl<'a> Parser<'a> {
             TokenKind::IntLiteral(int) => Ok(Expression::Literal(i32!(int as i32))),
             TokenKind::StringLiteral(str) => Ok(Expression::Literal(string!(str))),
             TokenKind::Bang => Ok(self.parse_bang(token.loc)?),
+            TokenKind::Minus => Ok(self.parse_negate(token.loc)?),
             TokenKind::Ident(name) => {
                 let args = match self.peek_token() {
                     Some(tok) if tok.kind == TokenKind::OParen => {

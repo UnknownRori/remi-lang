@@ -32,6 +32,11 @@ impl Codegen for IRCodegen {
                     offset,
                     dump_args(&arg)
                 )),
+                crate::op::Op::UnaryNegate { offset, arg } => body.push(format!(
+                    "        UnaryNegate({:#04x}, {})",
+                    offset,
+                    dump_args(&arg)
+                )),
                 crate::op::Op::UnaryNot { offset, arg } => body.push(format!(
                     "        UnaryNot({:#04x}, {})",
                     offset,

@@ -262,6 +262,9 @@ impl Compiler {
                     crate::ast::UnaryOp::Not => {
                         opsbin.push(Op::UnaryNot { offset, arg: lhs });
                     }
+                    crate::ast::UnaryOp::Negate => {
+                        opsbin.push(Op::UnaryNegate { offset, arg: lhs });
+                    }
                 }
                 Ok((Arg::Local(offset), opsbin))
             }
